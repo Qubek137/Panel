@@ -1,33 +1,11 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { MapPin, Thermometer, Droplets, Wind, ArrowLeft, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
-
-interface WeatherData {
-  location: string
-  temperature: number
-  humidity: number
-  windSpeed: number
-  condition: string
-  description: string
-}
-
-interface Location {
-  name: string
-  locationKey: string
-}
-
-const locations: Location[] = [
-  { name: "Wieluń Piaski", locationKey: "2747373" },
-  { name: "Konopnica", locationKey: "2747374" },
-  { name: "Wieluń", locationKey: "315078" },
-  { name: "Łódź", locationKey: "274231" },
-  { name: "Warszawa", locationKey: "274663" },
-]
+import { MapPin, Thermometer, Droplets, Wind, ArrowLeft, ChevronUp, ChevronDown, ChevronRight } from "lucide-react"
+import { locations, getWeatherWithTimeVariation, type WeatherData } from "@/lib/static-weather-data"
 
 export default function MobileControlPanel() {
   const [showWeather, setShowWeather] = useState(true)
@@ -99,61 +77,29 @@ export default function MobileControlPanel() {
     }
   }
 
-  const fetchWeatherData = async (location: Location) => {
+  // Funkcja do pobierania statycznych danych pogodowych
+  const fetchStaticWeatherData = (locationIndex: number) => {
     setLoading(true)
-    try {
-      const API_KEY = process.env.NEXT_PUBLIC_ACCUWEATHER_API_KEY || "demo_key"
 
-      const response = await fetch(
-        `https://dataservice.accuweather.com/currentconditions/v1/${location.locationKey}?apikey=${API_KEY}&language=pl&details=true`,
-      )
-
-      if (!response.ok) {
-        throw new Error("AccuWeather API failed")
-      }
-
-      const data = await response.json()
-      const currentWeather = data[0]
-
-      setWeather({
-        location: location.name,
-        temperature: Math.round(currentWeather.Temperature.Metric.Value),
-        humidity: currentWeather.RelativeHumidity,
-        windSpeed: Math.round(currentWeather.Wind.Speed.Metric.Value),
-        condition: currentWeather.WeatherText,
-        description: currentWeather.WeatherText.toLowerCase(),
-      })
-    } catch (error) {
-      console.error("Weather fetch failed:", error)
-      const mockWeatherConditions = [
-        { condition: "Pochmurno", description: "pochmurno", temp: 8, humidity: 75, wind: 15 },
-        { condition: "Częściowe zachmurzenie", description: "częściowe zachmurzenie", temp: 12, humidity: 60, wind: 8 },
-        { condition: "Słonecznie", description: "słonecznie", temp: 18, humidity: 45, wind: 5 },
-        { condition: "Deszcz", description: "lekki deszcz", temp: 6, humidity: 85, wind: 20 },
-        { condition: "Mgła", description: "mgła", temp: 4, humidity: 95, wind: 3 },
-      ]
-
-      const randomWeather = mockWeatherConditions[Math.floor(Math.random() * mockWeatherConditions.length)]
-
-      setWeather({
-        location: location.name,
-        temperature: randomWeather.temp,
-        humidity: randomWeather.humidity,
-        windSpeed: randomWeather.wind,
-        condition: randomWeather.condition,
-        description: randomWeather.description,
-      })
-    } finally {
+    // Symuluj opóźnienie ładowania
+    setTimeout(() => {
+      const location = locations[locationIndex]
+      const weatherData = getWeatherWithTimeVariation(location.locationKey)
+      setWeather(weatherData)
       setLoading(false)
-    }
+    }, 500)
   }
 
+  // Pobierz dane pogodowe przy zmianie lokalizacji
   useEffect(() => {
-    fetchWeatherData(locations[currentLocationIndex])
+    fetchStaticWeatherData(currentLocationIndex)
+  }, [currentLocationIndex])
 
+  // Auto-refresh co 5 minut (symulacja aktualizacji)
+  useEffect(() => {
     const interval = setInterval(
       () => {
-        fetchWeatherData(locations[currentLocationIndex])
+        fetchStaticWeatherData(currentLocationIndex)
       },
       5 * 60 * 1000,
     )
@@ -168,7 +114,12 @@ export default function MobileControlPanel() {
       color: "bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700",
       textColor: "text-white",
     },
-    { id: 2, label: "Temperatura", color: "bg-red-500 hover:bg-red-600 active:bg-red-700", textColor: "text-white" },
+    {
+      id: 2,
+      label: "Temperatura",
+      color: "bg-red-500 hover:bg-red-600 active:bg-red-700",
+      textColor: "text-white",
+    },
     {
       id: 3,
       label: "Bezpieczeństwo",
@@ -187,12 +138,28 @@ export default function MobileControlPanel() {
       color: "bg-purple-500 hover:bg-purple-600 active:bg-purple-700",
       textColor: "text-white",
     },
-    { id: 6, label: "Alarm", color: "bg-orange-500 hover:bg-orange-600 active:bg-orange-700", textColor: "text-white" },
+    {
+      id: 6,
+      label: "Alarm",
+      color: "bg-orange-500 hover:bg-orange-600 active:bg-orange-700",
+      textColor: "text-white",
+    },
   ]
 
   const handleControlButtonClick = (button: any) => {
     triggerHaptic([100, 50, 100])
+
+    // Symulacja akcji - można rozszerzyć o rzeczywiste funkcjonalności
     console.log(`${button.label} pressed`)
+
+    // Przykład: zmiana stanu przycisku (można dodać stan lokalny)
+    const buttonElement = document.querySelector(`[data-button-id="${button.id}"]`)
+    if (buttonElement) {
+      buttonElement.classList.add("animate-pulse")
+      setTimeout(() => {
+        buttonElement.classList.remove("animate-pulse")
+      }, 1000)
+    }
   }
 
   if (showWeather) {
@@ -235,7 +202,10 @@ export default function MobileControlPanel() {
           <ChevronRight className="w-5 h-5" />
         </div>
 
-        <Card ref={weatherCardRef} className="w-full max-w-sm bg-white/95 backdrop-blur-sm shadow-2xl mx-4 weather-card">
+        <Card
+          ref={weatherCardRef}
+          className="w-full max-w-sm bg-white/95 backdrop-blur-sm shadow-2xl mx-4 weather-card"
+        >
           <CardContent className="p-6">
             {loading ? (
               <div className="text-center">
@@ -269,10 +239,21 @@ export default function MobileControlPanel() {
                     <span>{weather.windSpeed} km/h</span>
                   </div>
                 </div>
+
+                {/* Timestamp dla offline mode */}
+                <div className="text-xs text-gray-400 mt-4">
+                  Ostatnia aktualizacja: {new Date(weather.timestamp).toLocaleTimeString("pl-PL")}
+                </div>
               </div>
             ) : (
               <div className="text-center text-gray-600 py-8">
                 <p className="text-lg">Błąd ładowania pogody</p>
+                <button
+                  onClick={() => fetchStaticWeatherData(currentLocationIndex)}
+                  className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md text-sm"
+                >
+                  Spróbuj ponownie
+                </button>
               </div>
             )}
           </CardContent>
@@ -292,6 +273,7 @@ export default function MobileControlPanel() {
         {controlButtons.map((button) => (
           <Button
             key={button.id}
+            data-button-id={button.id}
             className={`${button.color} ${button.textColor} h-full text-base font-semibold rounded-lg shadow-md transition-all duration-150 transform hover:scale-105 active:scale-95 border border-white/20 animate-button control-button`}
             onClick={() => handleControlButtonClick(button)}
           >

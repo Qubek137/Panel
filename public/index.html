@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Panel Sterowania - Wieluń</title>
+    <meta name="description" content="Mobilny panel sterowania z pogodą AccuWeather dla regionu Wieluń. Responsywny design zoptymalizowany dla telefonów.">
+    <meta name="keywords" content="panel sterowania, pogoda, Wieluń, mobile, responsywny">
+    <meta name="author" content="Panel Control System">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Panel Sterowania">
+    <meta name="application-name" content="Panel Sterowania">
+    <meta name="msapplication-TileColor" content="#3b82f6">
+    <meta name="theme-color" content="#3b82f6">
+    
+    <!-- Icons -->
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16x16.png">
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="./styles.css" as="style">
+    <link rel="preload" href="./script.js" as="script">
+    
+    <!-- DNS Prefetch (for future API calls) -->
+    <link rel="dns-prefetch" href="//dataservice.accuweather.com">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Ładowanie Panel Sterowania...</p>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container" style="display: none;">
+        
+        <!-- Weather View -->
+        <div id="weather-view" class="weather-view active">
+            <!-- Location Indicators -->
+            <div class="location-indicators">
+                <div class="indicator active" data-location="0"></div>
+                <div class="indicator" data-location="1"></div>
+                <div class="indicator" data-location="2"></div>
+                <div class="indicator" data-location="3"></div>
+                <div class="indicator" data-location="4"></div>
+            </div>
+
+            <!-- Time Display -->
+            <div class="time-display" id="current-time">
+                00:00
+            </div>
+
+            <!-- Navigation Arrows -->
+            <div class="nav-arrow nav-arrow-up">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="18,15 12,9 6,15"></polyline>
+                </svg>
+            </div>
+            <div class="nav-arrow nav-arrow-down">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6,9 12,15 18,9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-arrow nav-arrow-right">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9,18 15,12 9,6"></polyline>
+                </svg>
+            </div>
+
+            <!-- Weather Card -->
+            <div class="weather-card" id="weather-card">
+                <div class="weather-content">
+                    <!-- Loading State -->
+                    <div id="weather-loading" class="weather-loading">
+                        <div class="weather-spinner"></div>
+                        <p>Ładowanie...</p>
+                    </div>
+
+                    <!-- Weather Data -->
+                    <div id="weather-data" class="weather-data" style="display: none;">
+                        <div class="weather-location">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span id="location-name">Wieluń</span>
+                        </div>
+
+                        <div class="weather-temperature">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path>
+                            </svg>
+                            <span id="temperature">15°C</span>
+                        </div>
+
+                        <div class="weather-condition">
+                            <p id="condition" class="condition-main">Słonecznie</p>
+                            <p id="description" class="condition-desc">pogodnie i ciepło</p>
+                        </div>
+
+                        <div class="weather-details">
+                            <div class="detail-item">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <span id="humidity">60%</span>
+                            </div>
+                            <div class="detail-item">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"></path>
+                                    <path d="M9.6 4.6A2 2 0 1 1 11 8H2"></path>
+                                    <path d="M12.6 19.4A2 2 0 1 0 14 16H2"></path>
+                                </svg>
+                                <span id="wind-speed">10 km/h</span>
+                            </div>
+                        </div>
+
+                        <div class="weather-timestamp">
+                            Ostatnia aktualizacja: <span id="last-update">--:--</span>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="weather-error" class="weather-error" style="display: none;">
+                        <p>Błąd ładowania pogody</p>
+                        <button id="retry-weather" class="retry-button">Spróbuj ponownie</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel View -->
+        <div id="control-view" class="control-view">
+            <div class="control-grid">
+                <button class="control-button control-button-1" data-button="1">
+                    <div class="button-content">
+                        <div class="button-label">Oświetlenie</div>
+                        <div class="button-sublabel">Panel 1</div>
+                    </div>
+                </button>
+                
+                <button class="control-button control-button-2" data-button="2">
+                    <div class="button-content">
+                        <div class="button-label">Temperatura</div>
+                        <div class="button-sublabel">Panel 2</div>
+                    </div>
+                </button>
+                
+                <button class="control-button control-button-3" data-button="3">
+                    <div class="button-content">
+                        <div class="button-label">Bezpieczeństwo</div>
+                        <div class="button-sublabel">Panel 3</div>
+                    </div>
+                </button>
+                
+                <button class="control-button control-button-4" data-button="4">
+                    <div class="button-content">
+                        <div class="button-label">System Audio</div>
+                        <div class="button-sublabel">Panel 4</div>
+                    </div>
+                </button>
+                
+                <button class="control-button control-button-5" data-button="5">
+                    <div class="button-content">
+                        <div class="button-label">Wentylacja</div>
+                        <div class="button-sublabel">Panel 5</div>
+                    </div>
+                </button>
+                
+                <button class="control-button control-button-6" data-button="6">
+                    <div class="button-content">
+                        <div class="button-label">Alarm</div>
+                        <div class="button-sublabel">Panel 6</div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Back Arrow -->
+            <div class="nav-arrow nav-arrow-left">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15,18 9,12 15,6"></polyline>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offline Indicator -->
+    <div id="offline-indicator" class="offline-indicator" style="display: none;">
+        <span>Tryb offline</span>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./script.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function(registration) {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+
+    <!-- No Script Fallback -->
+    <noscript>
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; text-align: center; padding: 20px; z-index: 10000;">
+            Ta aplikacja wymaga JavaScript do działania.<br>
+            Włącz JavaScript w swojej przeglądarce.
+        </div>
+    </noscript>
+</body>
+</html>

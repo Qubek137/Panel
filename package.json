@@ -1,11 +1,15 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "panel-sterowania-static",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "next build",
+    "build-static": "next build",
+    "clean": "rm -rf .next out",
     "dev": "next dev",
+    "export": "next build && next export",
     "lint": "next lint",
+    "serve-static": "npx serve out -s",
     "start": "next start"
   },
   "dependencies": {
