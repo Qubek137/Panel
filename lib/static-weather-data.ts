@@ -175,22 +175,44 @@ export const staticWeatherData: Record<string, WeatherData> = {
   },
 }
 
-// API rate limiting
+// API rate limiting - fixed for SSR compatibility
 export class APIRateLimit {
   private calls = 0
   private lastReset: number = Date.now()
   private readonly maxCalls: number = 9000 // Leave some buffer under 10000
   private readonly resetInterval: number = 24 * 60 * 60 * 1000 // 24 hours
+  private initialized = false
+
+  private initializeFromStorage(): void {
+    if (this.initialized || typeof window === "undefined") return
+
+    try {
+      const savedCalls = localStorage.getItem("api_calls")
+      const savedReset = localStorage.getItem("api_last_reset")
+      if (savedCalls) this.calls = Number.parseInt(savedCalls)
+      if (savedReset) this.lastReset = Number.parseInt(savedReset)
+      this.initialized = true
+    } catch (error) {
+      console.warn("Failed to initialize from localStorage:", error)
+    }
+  }
 
   canMakeCall(): boolean {
+    this.initializeFromStorage()
     this.checkReset()
     return this.calls < this.maxCalls
   }
 
   recordCall(): void {
     this.calls++
-    localStorage.setItem("api_calls", this.calls.toString())
-    localStorage.setItem("api_last_reset", this.lastReset.toString())
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("api_calls", this.calls.toString())
+        localStorage.setItem("api_last_reset", this.lastReset.toString())
+      } catch (error) {
+        console.warn("Failed to save to localStorage:", error)
+      }
+    }
   }
 
   private checkReset(): void {
@@ -198,16 +220,11 @@ export class APIRateLimit {
     if (now - this.lastReset > this.resetInterval) {
       this.calls = 0
       this.lastReset = now
-    } else {
-      // Load from localStorage
-      const savedCalls = localStorage.getItem("api_calls")
-      const savedReset = localStorage.getItem("api_last_reset")
-      if (savedCalls) this.calls = Number.parseInt(savedCalls)
-      if (savedReset) this.lastReset = Number.parseInt(savedReset)
     }
   }
 
   getRemainingCalls(): number {
+    this.initializeFromStorage()
     this.checkReset()
     return Math.max(0, this.maxCalls - this.calls)
   }

@@ -15,6 +15,10 @@ import {
   Sun,
   Sunset,
   Clock,
+  Eye,
+  Gauge,
+  Thermometer,
+  Navigation,
 } from "lucide-react"
 import {
   locations,
@@ -34,8 +38,20 @@ export default function MobileControlPanel() {
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
+  const [showHourlyForecast, setShowHourlyForecast] = useState(false)
+  const [backgroundGradient, setBackgroundGradient] = useState("from-blue-500 via-blue-600 to-blue-700")
+  const [currentTime, setCurrentTime] = useState(new Date())
   const weatherCardRef = useRef<HTMLDivElement>(null)
   const apiRateLimit = useRef(new APIRateLimit())
+
+  // Update current time every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(timer)
+  }, [])
 
   // Haptic feedback function
   const triggerHaptic = (pattern: number | number[] = 50) => {
@@ -43,6 +59,56 @@ export default function MobileControlPanel() {
       navigator.vibrate(pattern)
     }
   }
+
+  // Get background gradient based on weather conditions and time
+  const getBackgroundGradient = (weatherData: WeatherData | null): string => {
+    if (!weatherData) return "from-blue-500 via-blue-600 to-blue-700"
+
+    const currentHour = new Date().getHours()
+    const isNight = currentHour < 6 || currentHour > 20
+    const condition = weatherData.condition.toLowerCase()
+
+    // Night time - dark gradient
+    if (isNight) {
+      return "from-gray-900 via-slate-900 to-black"
+    }
+
+    // Sunny conditions - bright yellow/orange gradient
+    if (condition.includes("słonecznie") || condition.includes("bezchmurnie")) {
+      return "from-yellow-400 via-amber-500 to-orange-500"
+    }
+
+    // Rain conditions - dark gray gradient
+    if (condition.includes("deszcz") || condition.includes("mżawka") || condition.includes("opady")) {
+      return "from-slate-600 via-gray-700 to-slate-800"
+    }
+
+    // Snow conditions - light gray/white gradient
+    if (condition.includes("śnieg") || condition.includes("szron")) {
+      return "from-slate-200 via-gray-100 to-slate-300"
+    }
+
+    // Cloudy conditions - blue-gray gradient
+    if (condition.includes("pochmurno") || condition.includes("zachmurzenie")) {
+      return "from-slate-500 via-blue-500 to-gray-600"
+    }
+
+    // Thunderstorm - dramatic dark gradient
+    if (condition.includes("burza")) {
+      return "from-slate-800 via-purple-900 to-gray-900"
+    }
+
+    // Default enhanced blue gradient
+    return "from-blue-500 via-blue-600 to-blue-700"
+  }
+
+  // Update background when weather changes
+  useEffect(() => {
+    if (weather) {
+      const newGradient = getBackgroundGradient(weather)
+      setBackgroundGradient(newGradient)
+    }
+  }, [weather])
 
   // Swipe detection
   const minSwipeDistance = 50
@@ -98,7 +164,7 @@ export default function MobileControlPanel() {
     }
   }
 
-  // Fetch weather data from Open-Meteo API
+  // Fetch weather data from Open-Meteo API with enhanced parameters
   const fetchWeatherData = async (locationIndex: number) => {
     setLoading(true)
     setApiError(null)
@@ -117,7 +183,8 @@ export default function MobileControlPanel() {
     }
 
     try {
-      const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&daily=weather_code,sunrise,sunset,sunshine_duration&hourly=temperature_2m,relative_humidity_2m,rain,snowfall,surface_pressure,visibility,precipitation&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto&forecast_days=1`
+      // Enhanced API call with more parameters
+      const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,snow_depth,weather_code,pressure_msl,surface_pressure,cloud_cover,visibility,evapotranspiration,et0_fao_evapotranspiration,vapour_pressure_deficit,wind_speed_10m,wind_speed_80m,wind_speed_120m,wind_speed_180m,wind_direction_10m,wind_direction_80m,wind_direction_120m,wind_direction_180m,wind_gusts_10m,temperature_80m,temperature_120m,temperature_180m,soil_temperature_0cm,soil_temperature_6cm,soil_temperature_18cm,soil_temperature_54cm,soil_moisture_0_1cm,soil_moisture_1_3cm,soil_moisture_3_9cm,soil_moisture_9_27cm,soil_moisture_27_81cm&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,daylight_duration,sunshine_duration,uv_index_max,uv_index_clear_sky_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,shortwave_radiation_sum,et0_fao_evapotranspiration&timezone=auto&forecast_days=7`
 
       const response = await fetch(apiUrl)
 
@@ -128,7 +195,7 @@ export default function MobileControlPanel() {
       const data = await response.json()
       apiRateLimit.current.recordCall()
 
-      // Process API response
+      // Process API response with enhanced data
       const weatherData: WeatherData = {
         location: location.name,
         temperature: Math.round(data.current.temperature_2m),
@@ -140,6 +207,11 @@ export default function MobileControlPanel() {
         timestamp: Date.now(),
         sunrise: formatTime(data.daily.sunrise[0]),
         sunset: formatTime(data.daily.sunset[0]),
+        pressure: Math.round(data.current.pressure_msl || data.current.surface_pressure),
+        visibility: Math.round((data.hourly.visibility[0] || 10000) / 1000), // Convert to km
+        uvIndex: Math.round(data.daily.uv_index_max[0] || 0),
+        feelsLike: Math.round(data.current.apparent_temperature),
+        dewPoint: Math.round(data.hourly.dew_point_2m[0] || 0),
         hourlyForecast: processHourlyData(data.hourly),
       }
 
@@ -163,7 +235,7 @@ export default function MobileControlPanel() {
     }
   }
 
-  // Process hourly forecast data
+  // Process hourly forecast data with enhanced parameters
   const processHourlyData = (hourlyData: any): HourlyWeather[] => {
     const next24Hours = []
     const currentHour = new Date().getHours()
@@ -171,17 +243,24 @@ export default function MobileControlPanel() {
     for (let i = 0; i < 24; i++) {
       const hourIndex = currentHour + i
       if (hourIndex < hourlyData.time.length) {
+        const weatherCode = hourlyData.weather_code[hourIndex] || 0
         next24Hours.push({
           time: formatTime(hourlyData.time[hourIndex]),
           temperature: Math.round(hourlyData.temperature_2m[hourIndex]),
           humidity: hourlyData.relative_humidity_2m[hourIndex],
           precipitation: hourlyData.precipitation[hourIndex] || 0,
-          windSpeed: Math.round(hourlyData.wind_speed_10m?.[hourIndex] || 0),
+          windSpeed: Math.round(hourlyData.wind_speed_10m[hourIndex] || 0),
+          windDirection: hourlyData.wind_direction_10m[hourIndex] || 0,
+          pressure: Math.round(hourlyData.pressure_msl[hourIndex] || hourlyData.surface_pressure[hourIndex] || 1013),
+          visibility: Math.round((hourlyData.visibility[hourIndex] || 10000) / 1000),
+          weatherCode,
+          icon: weatherCodeMap[weatherCode]?.icon || "❓",
+          condition: weatherCodeMap[weatherCode]?.condition || "Nieznane",
         })
       }
     }
 
-    return next24Hours.slice(0, 12) // Show next 12 hours
+    return next24Hours
   }
 
   // Format ISO time to HH:MM
@@ -192,26 +271,54 @@ export default function MobileControlPanel() {
     })
   }
 
+  // Format timestamp without seconds
+  const formatTimestamp = (timestamp: number): string => {
+    return new Date(timestamp).toLocaleTimeString("pl-PL", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  // Format current time
+  const formatCurrentTime = (date: Date): string => {
+    return date.toLocaleTimeString("pl-PL", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
   // Cache management
   const cacheWeatherData = (locationKey: string, data: WeatherData) => {
-    const cacheKey = `weather_${locationKey}`
-    const cacheData = {
-      data,
-      timestamp: Date.now(),
-      expires: Date.now() + 30 * 60 * 1000, // 30 minutes
+    if (typeof window === "undefined") return
+
+    try {
+      const cacheKey = `weather_${locationKey}`
+      const cacheData = {
+        data,
+        timestamp: Date.now(),
+        expires: Date.now() + 30 * 60 * 1000, // 30 minutes
+      }
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData))
+    } catch (error) {
+      console.warn("Failed to cache weather data:", error)
     }
-    localStorage.setItem(cacheKey, JSON.stringify(cacheData))
   }
 
   const getCachedWeatherData = (locationKey: string): WeatherData | null => {
-    const cacheKey = `weather_${locationKey}`
-    const cached = localStorage.getItem(cacheKey)
+    if (typeof window === "undefined") return null
 
-    if (cached) {
-      const cacheData = JSON.parse(cached)
-      if (Date.now() < cacheData.expires) {
-        return cacheData.data
+    try {
+      const cacheKey = `weather_${locationKey}`
+      const cached = localStorage.getItem(cacheKey)
+
+      if (cached) {
+        const cacheData = JSON.parse(cached)
+        if (Date.now() < cacheData.expires) {
+          return cacheData.data
+        }
       }
+    } catch (error) {
+      console.warn("Failed to get cached weather data:", error)
     }
 
     return null
@@ -305,7 +412,7 @@ export default function MobileControlPanel() {
   if (showWeather) {
     return (
       <div
-        className="min-h-screen bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 p-4 flex items-center justify-center relative overflow-hidden mobile-container"
+        className={`min-h-screen bg-gradient-to-br ${backgroundGradient} p-4 flex items-center justify-center relative overflow-hidden mobile-container transition-all duration-1000 ease-in-out`}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -316,7 +423,7 @@ export default function MobileControlPanel() {
             <div
               key={index}
               className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                index === currentLocationIndex ? "bg-white" : "bg-white/40"
+                index === currentLocationIndex ? "bg-white shadow-lg" : "bg-white/40"
               }`}
             />
           ))}
@@ -325,7 +432,7 @@ export default function MobileControlPanel() {
         {/* Connection status */}
         <div className="absolute top-4 left-4 z-10">
           <div
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
+            className={`px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${
               isOnline ? "bg-green-500/80 text-white" : "bg-red-500/80 text-white"
             }`}
           >
@@ -333,25 +440,25 @@ export default function MobileControlPanel() {
           </div>
         </div>
 
-        {/* API calls remaining */}
-        <div className="absolute top-4 right-4 text-white/90 text-xs font-medium z-10">
-          API: {apiRateLimit.current.getRemainingCalls()}
+        {/* Current time */}
+        <div className="absolute top-4 right-4 text-white/90 text-lg font-bold z-10 bg-black/20 px-3 py-2 rounded-full backdrop-blur-sm">
+          {formatCurrentTime(currentTime)}
         </div>
 
         {/* Navigation arrows */}
-        <div className="absolute left-1/2 top-12 transform -translate-x-1/2 text-white/60 z-10">
-          <ChevronUp className="w-5 h-5" />
+        <div className="absolute left-1/2 top-12 transform -translate-x-1/2 text-white/70 z-10">
+          <ChevronUp className="w-5 h-5 drop-shadow-lg" />
         </div>
-        <div className="absolute left-1/2 bottom-12 transform -translate-x-1/2 text-white/60 z-10">
-          <ChevronDown className="w-5 h-5" />
+        <div className="absolute left-1/2 bottom-12 transform -translate-x-1/2 text-white/70 z-10">
+          <ChevronDown className="w-5 h-5 drop-shadow-lg" />
         </div>
-        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 z-10">
-          <ChevronRight className="w-5 h-5" />
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/70 z-10">
+          <ChevronRight className="w-5 h-5 drop-shadow-lg" />
         </div>
 
         <Card
           ref={weatherCardRef}
-          className="w-full max-w-sm bg-white/95 backdrop-blur-sm shadow-2xl mx-4 weather-card"
+          className="w-full max-w-sm bg-white/95 backdrop-blur-sm shadow-2xl mx-4 weather-card max-h-[90vh] overflow-y-auto"
         >
           <CardContent className="p-6">
             {loading ? (
@@ -376,20 +483,45 @@ export default function MobileControlPanel() {
                   <p className="text-base text-gray-600 capitalize">{weather.description}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-base mb-4">
-                  <div className="flex items-center gap-2 justify-center">
-                    <Droplets className="w-5 h-5 text-blue-500" />
+                {/* Enhanced weather parameters */}
+                <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                  <div className="flex items-center gap-2 justify-center bg-blue-50 rounded-lg p-2">
+                    <Droplets className="w-4 h-4 text-blue-500" />
                     <span>{weather.humidity}%</span>
                   </div>
-                  <div className="flex items-center gap-2 justify-center">
-                    <Wind className="w-5 h-5 text-gray-500" />
+                  <div className="flex items-center gap-2 justify-center bg-gray-50 rounded-lg p-2">
+                    <Wind className="w-4 h-4 text-gray-500" />
                     <span>{weather.windSpeed} km/h</span>
                   </div>
+                  {weather.feelsLike && (
+                    <div className="flex items-center gap-2 justify-center bg-orange-50 rounded-lg p-2">
+                      <Thermometer className="w-4 h-4 text-orange-500" />
+                      <span>{weather.feelsLike}°C</span>
+                    </div>
+                  )}
+                  {weather.pressure && (
+                    <div className="flex items-center gap-2 justify-center bg-purple-50 rounded-lg p-2">
+                      <Gauge className="w-4 h-4 text-purple-500" />
+                      <span>{weather.pressure} hPa</span>
+                    </div>
+                  )}
+                  {weather.visibility && (
+                    <div className="flex items-center gap-2 justify-center bg-green-50 rounded-lg p-2">
+                      <Eye className="w-4 h-4 text-green-500" />
+                      <span>{weather.visibility} km</span>
+                    </div>
+                  )}
+                  {weather.uvIndex !== undefined && (
+                    <div className="flex items-center gap-2 justify-center bg-yellow-50 rounded-lg p-2">
+                      <Sun className="w-4 h-4 text-yellow-500" />
+                      <span>UV {weather.uvIndex}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sunrise/Sunset */}
                 {weather.sunrise && weather.sunset && (
-                  <div className="grid grid-cols-2 gap-4 text-sm mb-4 bg-gray-50 rounded-lg p-3">
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-4 bg-gradient-to-r from-orange-50 to-blue-50 rounded-lg p-3">
                     <div className="flex items-center gap-2 justify-center">
                       <Sun className="w-4 h-4 text-yellow-500" />
                       <span>{weather.sunrise}</span>
@@ -401,31 +533,68 @@ export default function MobileControlPanel() {
                   </div>
                 )}
 
-                {/* Hourly forecast */}
+                {/* Toggle hourly forecast */}
                 {weather.hourlyForecast && weather.hourlyForecast.length > 0 && (
                   <div className="mt-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-700">Prognoza godzinowa</span>
-                    </div>
-                    <div className="flex overflow-x-auto gap-3 pb-2">
-                      {weather.hourlyForecast.slice(0, 6).map((hour, index) => (
-                        <div key={index} className="flex-shrink-0 text-center bg-gray-50 rounded-lg p-2 min-w-[60px]">
-                          <div className="text-xs text-gray-600">{hour.time}</div>
-                          <div className="text-sm font-medium">{hour.temperature}°</div>
-                          <div className="text-xs text-blue-500">{hour.humidity}%</div>
-                        </div>
-                      ))}
-                    </div>
+                    <button
+                      onClick={() => setShowHourlyForecast(!showHourlyForecast)}
+                      className="flex items-center gap-2 mb-2 mx-auto text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+                    >
+                      <Clock className="w-4 h-4" />
+                      <span>Prognoza 24h</span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${showHourlyForecast ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    {showHourlyForecast && (
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {weather.hourlyForecast.slice(0, 12).map((hour, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between bg-gray-50 rounded-lg p-3 text-xs"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium min-w-[40px]">{hour.time}</span>
+                              <span className="text-lg" title={hour.condition}>
+                                {hour.icon}
+                              </span>
+                              <span className="text-xs text-gray-500 hidden sm:block">{hour.condition}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold text-gray-800">{hour.temperature}°C</span>
+                              <div className="flex items-center gap-1 text-blue-500">
+                                <Droplets className="w-3 h-3" />
+                                <span>{hour.humidity}%</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-gray-500">
+                                <Navigation
+                                  className="w-3 h-3"
+                                  style={{ transform: `rotate(${hour.windDirection}deg)` }}
+                                />
+                                <span>{hour.windSpeed}</span>
+                              </div>
+                              {hour.precipitation > 0 && (
+                                <span className="text-blue-600 font-medium">{hour.precipitation.toFixed(1)}mm</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Error message */}
-                {apiError && <div className="text-xs text-red-500 bg-red-50 rounded p-2 mt-2">{apiError}</div>}
+                {apiError && (
+                  <div className="text-xs text-red-500 bg-red-50 rounded p-2 mt-2 border border-red-200">
+                    {apiError}
+                  </div>
+                )}
 
-                {/* Timestamp */}
+                {/* Timestamp without seconds */}
                 <div className="text-xs text-gray-400 mt-4">
-                  Ostatnia aktualizacja: {new Date(weather.timestamp).toLocaleTimeString("pl-PL")}
+                  Ostatnia aktualizacja: {formatTimestamp(weather.timestamp)}
                 </div>
               </div>
             ) : (
@@ -433,7 +602,7 @@ export default function MobileControlPanel() {
                 <p className="text-lg">Błąd ładowania pogody</p>
                 <button
                   onClick={() => fetchWeatherData(currentLocationIndex)}
-                  className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md text-sm"
+                  className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors"
                 >
                   Spróbuj ponownie
                 </button>

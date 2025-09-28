@@ -62,6 +62,7 @@ class WeatherApp {
     this.showWeatherView()
     this.fetchWeatherData()
     this.setupAutoRefresh()
+    this.updateCurrentTime()
     this.hideLoadingScreen()
   }
 
@@ -94,7 +95,7 @@ class WeatherApp {
       retryWeather: document.getElementById("retry-weather"),
       connectionStatus: document.getElementById("connection-status"),
       statusText: document.getElementById("status-text"),
-      apiCallsDisplay: document.getElementById("api-calls"),
+      currentTimeDisplay: document.getElementById("current-time"),
       indicators: document.querySelectorAll(".indicator"),
       controlButtons: document.querySelectorAll(".control-button"),
     }
@@ -236,6 +237,26 @@ class WeatherApp {
     })
   }
 
+  updateCurrentTime() {
+    const updateTime = () => {
+      const now = new Date()
+      const timeString = now.toLocaleTimeString("pl-PL", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+
+      if (this.elements.currentTimeDisplay) {
+        this.elements.currentTimeDisplay.textContent = timeString
+      }
+    }
+
+    // Update immediately
+    updateTime()
+
+    // Update every minute
+    setInterval(updateTime, 60000)
+  }
+
   checkApiRateLimit() {
     const now = Date.now()
     const dayInMs = 24 * 60 * 60 * 1000
@@ -247,8 +268,6 @@ class WeatherApp {
       localStorage.setItem("api_calls", "0")
       localStorage.setItem("api_last_reset", now.toString())
     }
-
-    this.updateApiCallsDisplay()
   }
 
   canMakeApiCall() {
@@ -258,14 +277,6 @@ class WeatherApp {
   recordApiCall() {
     this.apiCalls++
     localStorage.setItem("api_calls", this.apiCalls.toString())
-    this.updateApiCallsDisplay()
-  }
-
-  updateApiCallsDisplay() {
-    const remaining = Math.max(0, this.maxApiCalls - this.apiCalls)
-    if (this.elements.apiCallsDisplay) {
-      this.elements.apiCallsDisplay.textContent = `API: ${remaining}`
-    }
   }
 
   updateConnectionStatus() {
@@ -565,7 +576,12 @@ class WeatherApp {
     }
 
     if (this.elements.lastUpdate) {
-      this.elements.lastUpdate.textContent = `Ostatnia aktualizacja: ${new Date(weatherData.timestamp).toLocaleTimeString("pl-PL")}`
+      // Format time without seconds
+      const timeString = new Date(weatherData.timestamp).toLocaleTimeString("pl-PL", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+      this.elements.lastUpdate.textContent = `Ostatnia aktualizacja: ${timeString}`
     }
 
     this.showWeatherData()
@@ -812,6 +828,162 @@ class WeatherApp {
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
   window.weatherApp = new WeatherApp()
+
+  // Service Worker registration
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => {
+          console.log("SW registered: ", registration)
+
+          // Check for updates
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing
+            newWorker.addEventListener("statechange", () => {
+              if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                // New content is available, refresh the page
+                if (confirm("Nowa wersja aplikacji jest dostępna. Odświeżyć?")) {
+                  window.location.reload()
+                }
+              }
+            })
+          })
+        })
+        .catch((registrationError) => {
+          console.log("SW registration failed: ", registrationError)
+        })
+    })
+  }
+
+  // PWA install prompt
+  let deferredPrompt
+  const installButton = document.getElementById("install-button")
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    console.log("PWA install prompt triggered")
+    e.preventDefault()
+    deferredPrompt = e
+
+    if (installButton) {
+      installButton.style.display = "block"
+    }
+  })
+
+  if (installButton) {
+    installButton.addEventListener("click", () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt()
+        deferredPrompt.userChoice.then((choiceResult) => {
+          console.log(`PWA install outcome: ${choiceResult.outcome}`)
+          deferredPrompt = null
+          installButton.style.display = "none"
+        })
+      }
+    })
+  }
+
+  // Handle app installed
+  window.addEventListener("appinstalled", () => {
+    console.log("PWA was installed")
+    if (installButton) {
+      installButton.style.display = "none"
+    }
+  })
+
+  // Background sync for weather data
+  function requestBackgroundSync() {
+    if ("serviceWorker" in navigator && "sync" in window.ServiceWorkerRegistration.prototype) {
+      navigator.serviceWorker.ready
+        .then((registration) => {
+          return registration.sync.register("weather-sync")
+        })
+        .catch((error) => {
+          console.error("Background sync registration failed:", error)
+        })
+    }
+  }
+
+  // Request sync every 30 minutes
+  setInterval(requestBackgroundSync, 30 * 60 * 1000)
+
+  // Push notifications setup
+  async function setupPushNotifications() {
+    if ("Notification" in window && "serviceWorker" in navigator) {
+      const permission = await Notification.requestPermission()
+
+      if (permission === "granted") {
+        console.log("Notification permission granted")
+
+        // Subscribe to push notifications
+        navigator.serviceWorker.ready
+          .then((registration) => {
+            return registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: null, // Add your VAPID key here
+            })
+          })
+          .then((subscription) => {
+            console.log("Push subscription:", subscription)
+            // Send subscription to server
+          })
+          .catch((error) => {
+            console.error("Push subscription failed:", error)
+          })
+      }
+    }
+  }
+
+  // Initialize push notifications after user interaction
+  document.addEventListener("click", setupPushNotifications, { once: true })
+
+  // Performance monitoring
+  function logPerformance() {
+    if ("performance" in window) {
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          const perfData = performance.getEntriesByType("navigation")[0]
+          console.log("Performance metrics:", {
+            loadTime: perfData.loadEventEnd - perfData.loadEventStart,
+            domContentLoaded: perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart,
+            firstPaint: performance.getEntriesByType("paint").find((entry) => entry.name === "first-paint")?.startTime,
+            firstContentfulPaint: performance
+              .getEntriesByType("paint")
+              .find((entry) => entry.name === "first-contentful-paint")?.startTime,
+          })
+        }, 0)
+      })
+    }
+  }
+
+  logPerformance()
+
+  // Viewport height fix for mobile
+  function setViewportHeight() {
+    const vh = window.innerHeight * 0.01
+    document.documentElement.style.setProperty("--vh", `${vh}px`)
+  }
+
+  window.addEventListener("resize", setViewportHeight)
+  setViewportHeight()
+
+  // Touch event optimization
+  document.addEventListener("touchstart", () => {}, { passive: true })
+  document.addEventListener("touchmove", () => {}, { passive: true })
+
+  // Prevent zoom on double tap
+  let lastTouchEnd = 0
+  document.addEventListener(
+    "touchend",
+    (event) => {
+      const now = new Date().getTime()
+      if (now - lastTouchEnd <= 300) {
+        event.preventDefault()
+      }
+      lastTouchEnd = now
+    },
+    false,
+  )
 })
 
 // Global error handling

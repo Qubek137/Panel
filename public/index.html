@@ -2,252 +2,119 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Panel Sterowania - Wieluń (Enhanced Weather API)</title>
-    <meta name="description" content="Mobilny panel sterowania z rozszerzonymi danymi pogodowymi dla Konopnicy, Wielunia i Warszawy. Prognoza godzinowa, wschód/zachód słońca, ciśnienie, widoczność i więcej.">
-    <meta name="keywords" content="panel sterowania, pogoda, Wieluń, Konopnica, Warszawa, mobile, API, real-time, prognoza godzinowa, wschód słońca">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Panel Sterowania - Pogoda</title>
     
-    <!-- PWA Meta Tags -->
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Panel Sterowania">
-    <meta name="application-name" content="Panel Sterowania">
-    <meta name="msapplication-TileColor" content="#3b82f6">
+     SEO Meta Tags 
+    <meta name="description" content="Mobilny panel sterowania z prognozą pogody dla Konopnicy, Wielunia i Warszawy">
+    <meta name="keywords" content="pogoda, panel sterowania, mobilny, Konopnica, Wieluń, Warszawa">
+    <meta name="author" content="Panel Sterowania">
+    
+     Open Graph Meta Tags 
+    <meta property="og:title" content="Panel Sterowania - Pogoda">
+    <meta property="og:description" content="Mobilny panel sterowania z prognozą pogody">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://your-domain.com">
+    <meta property="og:image" content="/images/og-image.jpg">
+    
+     Twitter Card Meta Tags 
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Panel Sterowania - Pogoda">
+    <meta name="twitter:description" content="Mobilny panel sterowania z prognozą pogody">
+    <meta name="twitter:image" content="/images/twitter-image.jpg">
+    
+     PWA Meta Tags 
     <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Panel Sterowania">
+    <meta name="msapplication-TileColor" content="#3b82f6">
+    <meta name="msapplication-config" content="/browserconfig.xml">
     
-    <!-- Icons -->
-    <link rel="manifest" href="./manifest.json">
-    <link rel="icon" type="image/x-icon" href="./favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+     Favicon 
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#3b82f6">
     
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+     PWA Manifest 
+    <link rel="manifest" href="/manifest.json">
     
-    <!-- Styles -->
-    <link rel="stylesheet" href="./styles.css">
+     Preload Critical Resources 
+    <link rel="preload" href="/styles.css" as="style">
+    <link rel="preload" href="/script.js" as="script">
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="./script.js" as="script">
-    <link rel="preload" href="./styles.css" as="style">
-    <link rel="dns-prefetch" href="https://api.open-meteo.com">
+     DNS Prefetch 
+    <link rel="dns-prefetch" href="//api.open-meteo.com">
+    
+     Styles 
+    <link rel="stylesheet" href="/styles.css">
+    
+     Structured Data 
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Panel Sterowania - Pogoda",
+        "description": "Mobilny panel sterowania z prognozą pogody",
+        "url": "https://your-domain.com",
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "PLN"
+        }
+    }
+    </script>
 </head>
 <body>
+     Loading Screen 
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Panel Sterowania</p>
+        <small>Ładowanie aplikacji...</small>
+    </div>
+
+     Main App Container 
+    <div id="app" class="app-container">
+         React app will be mounted here 
+    </div>
+
+     Install Button (PWA) 
+    <button id="install-button" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; background: #3b82f6; color: white; border: none; padding: 12px 20px; border-radius: 25px; font-weight: 600; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+        📱 Zainstaluj aplikację
+    </button>
+
+     Network Status Indicator 
+    <div id="network-status" class="status-indicator" style="left: 1rem;"></div>
+
+     NoScript Fallback 
     <noscript>
         <div class="noscript-message">
-            Ta aplikacja wymaga JavaScript do działania.<br>
-            Włącz JavaScript w swojej przeglądarce.<br>
-            <small>Aplikacja pobiera rozszerzone dane pogodowe z API.</small>
+            <h2>JavaScript jest wymagany</h2>
+            <p>Ta aplikacja wymaga włączonego JavaScript do prawidłowego działania.</p>
+            <small>Proszę włączyć JavaScript w ustawieniach przeglądarki i odświeżyć stronę.</small>
         </div>
     </noscript>
 
-    <!-- Main App Container -->
-    <div id="app" class="app-container">
-        <!-- Loading Screen -->
-        <div id="loading-screen" class="loading-screen">
-            <div class="loading-spinner"></div>
-            <p>Ładowanie aplikacji...</p>
-            <small>Pobieranie rozszerzonych danych pogodowych...</small>
-        </div>
-
-        <!-- Weather View -->
-        <div id="weather-view" class="weather-view hidden">
-            <!-- Location indicators -->
-            <div class="location-indicators">
-                <div class="indicator active" data-location="0"></div>
-                <div class="indicator" data-location="1"></div>
-                <div class="indicator" data-location="2"></div>
-            </div>
-
-            <!-- Connection status -->
-            <div id="connection-status" class="connection-status online">
-                <span id="status-text">ONLINE</span>
-                <span id="api-calls" class="api-calls">API: 9000</span>
-            </div>
-
-            <!-- Navigation arrows -->
-            <div class="nav-arrow nav-up">▲</div>
-            <div class="nav-arrow nav-down">▼</div>
-            <div class="nav-arrow nav-right">▶</div>
-
-            <!-- Weather Card -->
-            <div class="weather-card">
-                <div class="weather-content">
-                    <div id="weather-loading" class="weather-loading">
-                        <div class="weather-spinner"></div>
-                        <p>Pobieranie danych pogodowych...</p>
-                        <small>Open-Meteo Enhanced API</small>
-                    </div>
-                    
-                    <div id="weather-data" class="weather-data hidden">
-                        <div class="location-info">
-                            <span class="location-icon">📍</span>
-                            <span id="location-name">Konopnica</span>
-                        </div>
-                        
-                        <div class="temperature-display">
-                            <span id="weather-icon" class="weather-icon">☀️</span>
-                            <span id="temperature">22°C</span>
-                        </div>
-                        
-                        <div class="weather-description">
-                            <p id="condition">Słonecznie</p>
-                            <p id="description">bezchmurne niebo</p>
-                        </div>
-                        
-                        <div class="weather-details">
-                            <div class="detail-item">
-                                <span class="detail-icon">💧</span>
-                                <span id="humidity">65%</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon">💨</span>
-                                <span id="wind-speed">12 km/h</span>
-                            </div>
-                        </div>
-
-                        <!-- Extended weather details -->
-                        <div class="extended-details">
-                            <div class="extended-detail">
-                                <div class="extended-detail-label">Odczuwalna</div>
-                                <div class="extended-detail-value" id="feels-like">24°C</div>
-                            </div>
-                            <div class="extended-detail">
-                                <div class="extended-detail-label">Ciśnienie</div>
-                                <div class="extended-detail-value" id="pressure">1013 hPa</div>
-                            </div>
-                            <div class="extended-detail">
-                                <div class="extended-detail-label">Widoczność</div>
-                                <div class="extended-detail-value" id="visibility">10 km</div>
-                            </div>
-                            <div class="extended-detail">
-                                <div class="extended-detail-label">UV Index</div>
-                                <div class="extended-detail-value" id="uv-index">5</div>
-                            </div>
-                        </div>
-
-                        <!-- Sun times -->
-                        <div id="sun-times" class="sun-times">
-                            <div class="sun-time">
-                                <span class="sun-icon">🌅</span>
-                                <span id="sunrise">06:30</span>
-                            </div>
-                            <div class="sun-time">
-                                <span class="sun-icon">🌇</span>
-                                <span id="sunset">19:45</span>
-                            </div>
-                        </div>
-
-                        <!-- Hourly forecast -->
-                        <div id="hourly-forecast" class="hourly-forecast">
-                            <div class="forecast-header">
-                                <span class="forecast-icon">🕐</span>
-                                <span>Prognoza godzinowa (24h)</span>
-                            </div>
-                            <div id="hourly-list" class="hourly-list">
-                                <!-- Populated by JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- Daily forecast -->
-                        <div id="daily-forecast" class="daily-forecast">
-                            <div class="forecast-header">
-                                <span class="forecast-icon">📅</span>
-                                <span>Prognoza 7-dniowa</span>
-                            </div>
-                            <div id="daily-list" class="daily-list">
-                                <!-- Populated by JavaScript -->
-                            </div>
-                        </div>
-                        
-                        <div id="last-update" class="last-update">
-                            Ostatnia aktualizacja: --:--
-                        </div>
-
-                        <div id="api-error" class="api-error hidden">
-                            <p>Błąd API - używam danych z cache</p>
-                        </div>
-                    </div>
-                    
-                    <div id="weather-error" class="weather-error hidden">
-                        <p>Błąd ładowania pogody</p>
-                        <button id="retry-weather" class="retry-button">Spróbuj ponownie</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Control Panel View -->
-        <div id="control-view" class="control-view hidden">
-            <div class="control-grid">
-                <button class="control-button lighting" data-id="1">
-                    <div class="button-content">
-                        <div class="button-title">Oświetlenie</div>
-                        <div class="button-subtitle">Panel 1</div>
-                    </div>
-                </button>
-                
-                <button class="control-button temperature" data-id="2">
-                    <div class="button-content">
-                        <div class="button-title">Temperatura</div>
-                        <div class="button-subtitle">Panel 2</div>
-                    </div>
-                </button>
-                
-                <button class="control-button security" data-id="3">
-                    <div class="button-content">
-                        <div class="button-title">Bezpieczeństwo</div>
-                        <div class="button-subtitle">Panel 3</div>
-                    </div>
-                </button>
-                
-                <button class="control-button audio" data-id="4">
-                    <div class="button-content">
-                        <div class="button-title">System Audio</div>
-                        <div class="button-subtitle">Panel 4</div>
-                    </div>
-                </button>
-                
-                <button class="control-button ventilation" data-id="5">
-                    <div class="button-content">
-                        <div class="button-title">Wentylacja</div>
-                        <div class="button-subtitle">Panel 5</div>
-                    </div>
-                </button>
-                
-                <button class="control-button alarm" data-id="6">
-                    <div class="button-content">
-                        <div class="button-title">Alarm</div>
-                        <div class="button-subtitle">Panel 6</div>
-                    </div>
-                </button>
-            </div>
-
-            <!-- Arrow indicator for going back to weather -->
-            <div class="nav-arrow nav-left">◀</div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="./script.js"></script>
+     Scripts 
+    <script src="/script.js"></script>
     
-    <!-- Service Worker Registration -->
+     Hide loading screen when page loads 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch(registrationError => {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
-        }
+        window.addEventListener('load', () => {
+            const loadingScreen = document.getElementById('loading-screen')
+            if (loadingScreen) {
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0'
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none'
+                    }, 300)
+                }, 1000)
+            }
+        })
     </script>
 </body>
 </html>
