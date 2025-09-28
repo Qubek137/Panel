@@ -1,540 +1,572 @@
-/**
- * Panel Sterowania - Main Application Script
- * Mobilny panel sterowania z pogodą dla regionu Wieluń
- */
+// Weather App JavaScript
+class WeatherApp {
+  constructor() {
+    this.weatherData = [
+      {
+        id: 1,
+        location: "Wieluń",
+        temperature: 18,
+        description: "częściowo pochmurno",
+        icon: "⛅",
+        humidity: 65,
+        windSpeed: 12,
+        pressure: 1013,
+        visibility: 10,
+      },
+      {
+        id: 2,
+        location: "Częstochowa",
+        temperature: 20,
+        description: "słonecznie",
+        icon: "☀️",
+        humidity: 45,
+        windSpeed: 8,
+        pressure: 1015,
+        visibility: 15,
+      },
+      {
+        id: 3,
+        location: "Kalisz",
+        temperature: 16,
+        description: "deszczowo",
+        icon: "🌧️",
+        humidity: 85,
+        windSpeed: 15,
+        pressure: 1008,
+        visibility: 8,
+      },
+      {
+        id: 4,
+        location: "Łódź",
+        temperature: 19,
+        description: "pochmurno",
+        icon: "☁️",
+        humidity: 70,
+        windSpeed: 10,
+        pressure: 1011,
+        visibility: 12,
+      },
+      {
+        id: 5,
+        location: "Sieradz",
+        temperature: 17,
+        description: "mgliście",
+        icon: "🌫️",
+        humidity: 90,
+        windSpeed: 5,
+        pressure: 1009,
+        visibility: 5,
+      },
+    ]
 
-// Application State
-const AppState = {
-  currentView: "weather", // 'weather' or 'control'
-  currentLocationIndex: 0,
-  weatherData: null,
-  isLoading: false,
-  isOffline: false,
-  touchStart: null,
-  touchEnd: null,
-  lastWeatherUpdate: null,
-}
-
-// Configuration
-const Config = {
-  minSwipeDistance: 50,
-  weatherUpdateInterval: 5 * 60 * 1000, // 5 minutes
-  hapticPatterns: {
-    short: 50,
-    medium: [50, 30, 50],
-    long: [100, 50, 100],
-  },
-  locations: [
-    { name: "Wieluń Piaski", locationKey: "2747373" },
-    { name: "Konopnica", locationKey: "2747374" },
-    { name: "Wieluń", locationKey: "315078" },
-    { name: "Łódź", locationKey: "274231" },
-    { name: "Warszawa", locationKey: "274663" },
-  ],
-}
-
-// Static Weather Data (for offline mode)
-const StaticWeatherData = {
-  2747373: [
-    {
-      location: "Wieluń Piaski",
-      temperature: 12,
-      humidity: 68,
-      windSpeed: 15,
-      condition: "Częściowe zachmurzenie",
-      description: "częściowe zachmurzenie z przejaśnieniami",
-    },
-    {
-      location: "Wieluń Piaski",
-      temperature: 8,
-      humidity: 75,
-      windSpeed: 12,
-      condition: "Pochmurno",
-      description: "pochmurno z możliwością opadów",
-    },
-  ],
-  2747374: [
-    {
-      location: "Konopnica",
-      temperature: 10,
-      humidity: 72,
-      windSpeed: 18,
-      condition: "Deszcz",
-      description: "lekki deszcz",
-    },
-  ],
-  315078: [
-    {
-      location: "Wieluń",
-      temperature: 15,
-      humidity: 55,
-      windSpeed: 12,
-      condition: "Słonecznie",
-      description: "słonecznie z niewielkim wiatrem",
-    },
-  ],
-  274231: [
-    {
-      location: "Łódź",
-      temperature: 16,
-      humidity: 50,
-      windSpeed: 14,
-      condition: "Słonecznie",
-      description: "pogodnie i ciepło",
-    },
-  ],
-  274663: [
-    {
-      location: "Warszawa",
-      temperature: 17,
-      humidity: 48,
-      windSpeed: 11,
-      condition: "Słonecznie",
-      description: "słonecznie i przyjemnie",
-    },
-  ],
-}
-
-// Utility Functions
-const Utils = {
-  // Haptic feedback
-  triggerHaptic(pattern = Config.hapticPatterns.short) {
-    if ("vibrate" in navigator) {
-      navigator.vibrate(pattern)
+    this.controlStates = {
+      lighting: false,
+      temperature: 22,
+      security: true,
+      ventilation: "auto",
+      energy: 85,
+      water: "ok",
     }
-  },
 
-  // Format time
-  formatTime(date = new Date()) {
+    this.lastUpdate = null
+    this.updateInterval = null
+    this.deferredPrompt = null
+
+    this.init()
+  }
+
+  init() {
+    this.setupEventListeners()
+    this.renderWeather()
+    this.updateControlStates()
+    this.startAutoUpdate()
+    this.hideLoadingScreen()
+    this.setupPWA()
+    this.setupHapticFeedback()
+  }
+
+  setupEventListeners() {
+    // Refresh weather button
+    const refreshBtn = document.getElementById("refresh-weather")
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", () => this.refreshWeather())
+    }
+
+    // Control buttons
+    const controlButtons = document.querySelectorAll(".control-btn")
+    controlButtons.forEach((btn) => {
+      btn.addEventListener("click", (e) => this.handleControlAction(e))
+    })
+
+    // Install button
+    const installBtn = document.getElementById("install-btn")
+    if (installBtn) {
+      installBtn.addEventListener("click", () => this.installApp())
+    }
+
+    // PWA install prompt
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault()
+      this.deferredPrompt = e
+      this.showInstallButton()
+    })
+
+    // Handle app installed
+    window.addEventListener("appinstalled", () => {
+      this.hideInstallButton()
+      this.showToast("Aplikacja została zainstalowana!", "success")
+    })
+
+    // Handle online/offline status
+    window.addEventListener("online", () => this.updateConnectionStatus(true))
+    window.addEventListener("offline", () => this.updateConnectionStatus(false))
+
+    // Handle visibility change for auto-refresh
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        this.refreshWeather()
+      }
+    })
+  }
+
+  hideLoadingScreen() {
+    setTimeout(() => {
+      const loadingScreen = document.getElementById("loading-screen")
+      const app = document.getElementById("app")
+
+      if (loadingScreen && app) {
+        loadingScreen.style.opacity = "0"
+        setTimeout(() => {
+          loadingScreen.style.display = "none"
+          app.style.display = "flex"
+          app.style.opacity = "0"
+          setTimeout(() => {
+            app.style.opacity = "1"
+            app.style.transition = "opacity 0.3s ease"
+          }, 50)
+        }, 300)
+      }
+    }, 1500)
+  }
+
+  renderWeather() {
+    const weatherGrid = document.getElementById("weather-grid")
+    if (!weatherGrid) return
+
+    weatherGrid.innerHTML = ""
+
+    this.weatherData.forEach((weather) => {
+      const weatherCard = this.createWeatherCard(weather)
+      weatherGrid.appendChild(weatherCard)
+    })
+
+    this.updateLastUpdateTime()
+  }
+
+  createWeatherCard(weather) {
+    const card = document.createElement("div")
+    card.className = "weather-card"
+    card.innerHTML = `
+            <div class="weather-header">
+                <div class="weather-location">${weather.location}</div>
+                <div class="weather-icon">${weather.icon}</div>
+            </div>
+            <div class="weather-temp">${weather.temperature}°C</div>
+            <div class="weather-description">${weather.description}</div>
+            <div class="weather-details">
+                <div class="weather-detail">
+                    <span class="weather-detail-label">Wilgotność</span>
+                    <span class="weather-detail-value">${weather.humidity}%</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="weather-detail-label">Wiatr</span>
+                    <span class="weather-detail-value">${weather.windSpeed} km/h</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="weather-detail-label">Ciśnienie</span>
+                    <span class="weather-detail-value">${weather.pressure} hPa</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="weather-detail-label">Widoczność</span>
+                    <span class="weather-detail-value">${weather.visibility} km</span>
+                </div>
+            </div>
+        `
+
+    return card
+  }
+
+  refreshWeather() {
+    this.triggerHapticFeedback()
+
+    // Simulate weather data update
+    this.weatherData = this.weatherData.map((weather) => ({
+      ...weather,
+      temperature: weather.temperature + (Math.random() - 0.5) * 4,
+      humidity: Math.max(20, Math.min(100, weather.humidity + (Math.random() - 0.5) * 20)),
+      windSpeed: Math.max(0, weather.windSpeed + (Math.random() - 0.5) * 10),
+      pressure: weather.pressure + (Math.random() - 0.5) * 20,
+    }))
+
+    this.renderWeather()
+    this.showToast("Dane pogodowe zostały odświeżone", "success")
+
+    // Animate refresh button
+    const refreshBtn = document.getElementById("refresh-weather")
+    if (refreshBtn) {
+      refreshBtn.style.transform = "rotate(360deg)"
+      setTimeout(() => {
+        refreshBtn.style.transform = ""
+      }, 500)
+    }
+  }
+
+  handleControlAction(event) {
+    const button = event.currentTarget
+    const action = button.dataset.action
+
+    this.triggerHapticFeedback()
+
+    // Toggle button state
+    button.classList.toggle("active")
+
+    // Update control state
+    switch (action) {
+      case "lighting":
+        this.controlStates.lighting = !this.controlStates.lighting
+        this.updateControlStatus("lighting-status", this.controlStates.lighting ? "ON" : "OFF")
+        break
+      case "temperature":
+        this.controlStates.temperature = this.controlStates.temperature === 22 ? 25 : 22
+        this.updateControlStatus("temperature-status", `${this.controlStates.temperature}°C`)
+        break
+      case "security":
+        this.controlStates.security = !this.controlStates.security
+        this.updateControlStatus("security-status", this.controlStates.security ? "AKTYWNE" : "NIEAKTYWNE")
+        break
+      case "ventilation":
+        this.controlStates.ventilation = this.controlStates.ventilation === "auto" ? "manual" : "auto"
+        this.updateControlStatus("ventilation-status", this.controlStates.ventilation.toUpperCase())
+        break
+      case "energy":
+        this.controlStates.energy = this.controlStates.energy === 85 ? 92 : 85
+        this.updateControlStatus("energy-status", `${this.controlStates.energy}%`)
+        break
+      case "water":
+        this.controlStates.water = this.controlStates.water === "ok" ? "low" : "ok"
+        this.updateControlStatus("water-status", this.controlStates.water.toUpperCase())
+        break
+    }
+
+    this.showToast(
+      `${this.getActionName(action)} zostało ${button.classList.contains("active") ? "włączone" : "wyłączone"}`,
+      "success",
+    )
+    this.updateControlStatusText()
+  }
+
+  getActionName(action) {
+    const names = {
+      lighting: "Oświetlenie",
+      temperature: "Kontrola temperatury",
+      security: "System bezpieczeństwa",
+      ventilation: "Wentylacja",
+      energy: "Zarządzanie energią",
+      water: "System wodny",
+    }
+    return names[action] || action
+  }
+
+  updateControlStatus(elementId, value) {
+    const element = document.getElementById(elementId)
+    if (element) {
+      element.textContent = value
+    }
+  }
+
+  updateControlStates() {
+    // Initialize control button states
+    Object.keys(this.controlStates).forEach((key) => {
+      const button = document.querySelector(`[data-action="${key}"]`)
+      if (button && (key === "security" || key === "lighting")) {
+        if (this.controlStates[key]) {
+          button.classList.add("active")
+        }
+      }
+    })
+
+    this.updateControlStatusText()
+  }
+
+  updateControlStatusText() {
+    const activeControls = Object.keys(this.controlStates).filter((key) => {
+      const state = this.controlStates[key]
+      return state === true || (typeof state === "string" && state !== "ok")
+    })
+
+    const statusElement = document.getElementById("control-status")
+    if (statusElement) {
+      statusElement.textContent = activeControls.length > 0 ? `Aktywne: ${activeControls.length}` : "Gotowy"
+    }
+  }
+
+  updateLastUpdateTime() {
+    this.lastUpdate = new Date()
+    const lastUpdateElement = document.getElementById("last-update")
+    if (lastUpdateElement) {
+      lastUpdateElement.textContent = `Ostatnia aktualizacja: ${this.formatTime(this.lastUpdate)}`
+    }
+  }
+
+  formatTime(date) {
     return date.toLocaleTimeString("pl-PL", {
       hour: "2-digit",
       minute: "2-digit",
-      hour12: false,
     })
-  },
+  }
 
-  // Get random weather data
-  getRandomWeatherData(locationKey) {
-    const locationData = StaticWeatherData[locationKey]
-    if (!locationData || locationData.length === 0) {
-      return {
-        location: "Nieznana lokalizacja",
-        temperature: 15,
-        humidity: 60,
-        windSpeed: 10,
-        condition: "Słonecznie",
-        description: "pogodnie",
-      }
+  startAutoUpdate() {
+    // Update weather every 5 minutes
+    this.updateInterval = setInterval(
+      () => {
+        if (!document.hidden) {
+          this.refreshWeather()
+        }
+      },
+      5 * 60 * 1000,
+    )
+  }
+
+  updateConnectionStatus(isOnline) {
+    const statusElement = document.getElementById("connection-status")
+    if (statusElement) {
+      statusElement.textContent = isOnline ? "ONLINE" : "OFFLINE"
+      statusElement.className = `status-indicator ${isOnline ? "online" : "offline"}`
     }
 
-    const randomIndex = Math.floor(Math.random() * locationData.length)
-    const baseData = locationData[randomIndex]
-
-    // Add time-based temperature variation
-    const hour = new Date().getHours()
-    let temperatureModifier = 0
-
-    if (hour >= 6 && hour < 12) {
-      temperatureModifier = Math.floor(Math.random() * 3)
-    } else if (hour >= 12 && hour < 18) {
-      temperatureModifier = Math.floor(Math.random() * 5) + 2
-    } else if (hour >= 18 && hour < 22) {
-      temperatureModifier = Math.floor(Math.random() * 2)
+    if (isOnline) {
+      this.showToast("Połączenie przywrócone", "success")
     } else {
-      temperatureModifier = -Math.floor(Math.random() * 3)
+      this.showToast("Tryb offline - aplikacja działa lokalnie", "warning")
+    }
+  }
+
+  setupPWA() {
+    // Check if app is already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      this.hideInstallButton()
     }
 
-    return {
-      ...baseData,
-      temperature: Math.max(baseData.temperature + temperatureModifier, -10),
-      timestamp: Date.now(),
+    // Update connection status
+    this.updateConnectionStatus(navigator.onLine)
+  }
+
+  showInstallButton() {
+    const installBtn = document.getElementById("install-btn")
+    if (installBtn) {
+      installBtn.style.display = "flex"
     }
-  },
+  }
 
-  // Debounce function
-  debounce(func, wait) {
-    let timeout
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout)
-        func(...args)
-      }
-      clearTimeout(timeout)
-      timeout = setTimeout(later, wait)
+  hideInstallButton() {
+    const installBtn = document.getElementById("install-btn")
+    if (installBtn) {
+      installBtn.style.display = "none"
     }
-  },
+  }
 
-  // Check if online
-  isOnline() {
-    return navigator.onLine
-  },
+  async installApp() {
+    if (!this.deferredPrompt) return
 
-  // Lazy load images
-  lazyLoadImages() {
-    const images = document.querySelectorAll("img[data-src]")
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const img = entry.target
-          img.src = img.dataset.src
-          img.classList.remove("lazy")
-          imageObserver.unobserve(img)
-        }
-      })
-    })
+    this.deferredPrompt.prompt()
+    const { outcome } = await this.deferredPrompt.userChoice
 
-    images.forEach((img) => imageObserver.observe(img))
-  },
-}
-
-// Weather Module
-const Weather = {
-  async fetchWeatherData(locationIndex) {
-    const location = Config.locations[locationIndex]
-    AppState.isLoading = true
-    this.showLoading()
-
-    try {
-      // Try to fetch real weather data first
-      if (Utils.isOnline()) {
-        const apiKey = "demo_key" // Replace with actual API key
-        const response = await fetch(
-          `https://dataservice.accuweather.com/currentconditions/v1/${location.locationKey}?apikey=${apiKey}&language=pl&details=true`,
-        )
-
-        if (response.ok) {
-          const data = await response.json()
-          const currentWeather = data[0]
-
-          AppState.weatherData = {
-            location: location.name,
-            temperature: Math.round(currentWeather.Temperature.Metric.Value),
-            humidity: currentWeather.RelativeHumidity,
-            windSpeed: Math.round(currentWeather.Wind.Speed.Metric.Value),
-            condition: currentWeather.WeatherText,
-            description: currentWeather.WeatherText.toLowerCase(),
-            timestamp: Date.now(),
-          }
-        } else {
-          throw new Error("API request failed")
-        }
-      } else {
-        throw new Error("Offline mode")
-      }
-    } catch (error) {
-      console.log("Using static weather data:", error.message)
-      // Fallback to static data
-      AppState.weatherData = Utils.getRandomWeatherData(location.locationKey)
+    if (outcome === "accepted") {
+      this.showToast("Instalowanie aplikacji...", "success")
     }
 
-    AppState.isLoading = false
-    AppState.lastWeatherUpdate = Date.now()
-    this.displayWeatherData()
-  },
+    this.deferredPrompt = null
+    this.hideInstallButton()
+  }
 
-  showLoading() {
-    const loadingEl = document.getElementById("weather-loading")
-    const dataEl = document.getElementById("weather-data")
-    const errorEl = document.getElementById("weather-error")
+  setupHapticFeedback() {
+    // Check if device supports haptic feedback
+    this.hasHapticFeedback = "vibrate" in navigator
+  }
 
-    loadingEl.style.display = "block"
-    dataEl.style.display = "none"
-    errorEl.style.display = "none"
-  },
-
-  displayWeatherData() {
-    const loadingEl = document.getElementById("weather-loading")
-    const dataEl = document.getElementById("weather-data")
-    const errorEl = document.getElementById("weather-error")
-
-    if (AppState.weatherData) {
-      // Update DOM elements
-      document.getElementById("location-name").textContent = AppState.weatherData.location
-      document.getElementById("temperature").textContent = `${AppState.weatherData.temperature}°C`
-      document.getElementById("condition").textContent = AppState.weatherData.condition
-      document.getElementById("description").textContent = AppState.weatherData.description
-      document.getElementById("humidity").textContent = `${AppState.weatherData.humidity}%`
-      document.getElementById("wind-speed").textContent = `${AppState.weatherData.windSpeed} km/h`
-
-      if (AppState.weatherData.timestamp) {
-        const updateTime = new Date(AppState.weatherData.timestamp)
-        document.getElementById("last-update").textContent = Utils.formatTime(updateTime)
-      }
-
-      loadingEl.style.display = "none"
-      dataEl.style.display = "block"
-      errorEl.style.display = "none"
-    } else {
-      loadingEl.style.display = "none"
-      dataEl.style.display = "none"
-      errorEl.style.display = "block"
+  triggerHapticFeedback() {
+    if (this.hasHapticFeedback) {
+      navigator.vibrate(50) // Short vibration
     }
-  },
+  }
 
-  updateLocationIndicators() {
-    const indicators = document.querySelectorAll(".indicator")
-    indicators.forEach((indicator, index) => {
-      indicator.classList.toggle("active", index === AppState.currentLocationIndex)
-    })
-  },
-}
+  showToast(message, type = "info", duration = 3000) {
+    const toastContainer = document.getElementById("toast-container")
+    if (!toastContainer) return
 
-// Touch Handler Module
-const TouchHandler = {
-  init() {
-    const app = document.getElementById("app")
-    app.addEventListener("touchstart", this.handleTouchStart.bind(this), { passive: true })
-    app.addEventListener("touchmove", this.handleTouchMove.bind(this), { passive: true })
-    app.addEventListener("touchend", this.handleTouchEnd.bind(this), { passive: true })
-  },
+    const toast = document.createElement("div")
+    toast.className = `toast ${type}`
 
-  handleTouchStart(e) {
-    AppState.touchEnd = null
-    AppState.touchStart = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    }
-  },
+    const title =
+      type === "success" ? "Sukces" : type === "error" ? "Błąd" : type === "warning" ? "Uwaga" : "Informacja"
 
-  handleTouchMove(e) {
-    AppState.touchEnd = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    }
-  },
+    toast.innerHTML = `
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        `
 
-  handleTouchEnd() {
-    if (!AppState.touchStart || !AppState.touchEnd) return
+    toastContainer.appendChild(toast)
 
-    const distanceX = AppState.touchStart.x - AppState.touchEnd.x
-    const distanceY = AppState.touchStart.y - AppState.touchEnd.y
-    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY)
-
-    if (isHorizontalSwipe) {
-      const isLeftSwipe = distanceX > Config.minSwipeDistance
-      const isRightSwipe = distanceX < -Config.minSwipeDistance
-
-      if (isLeftSwipe && AppState.currentView === "weather") {
-        Utils.triggerHaptic(Config.hapticPatterns.medium)
-        ViewManager.switchToControl()
-      }
-      if (isRightSwipe && AppState.currentView === "control") {
-        Utils.triggerHaptic(Config.hapticPatterns.medium)
-        ViewManager.switchToWeather()
-      }
-    } else {
-      if (AppState.currentView === "weather") {
-        const isUpSwipe = distanceY > Config.minSwipeDistance
-        const isDownSwipe = distanceY < -Config.minSwipeDistance
-
-        if (isUpSwipe) {
-          AppState.currentLocationIndex =
-            (AppState.currentLocationIndex - 1 + Config.locations.length) % Config.locations.length
-          Utils.triggerHaptic(Config.hapticPatterns.short)
-          Weather.updateLocationIndicators()
-          Weather.fetchWeatherData(AppState.currentLocationIndex)
-        }
-        if (isDownSwipe) {
-          AppState.currentLocationIndex = (AppState.currentLocationIndex + 1) % Config.locations.length
-          Utils.triggerHaptic(Config.hapticPatterns.short)
-          Weather.updateLocationIndicators()
-          Weather.fetchWeatherData(AppState.currentLocationIndex)
-        }
-      }
-    }
-  },
-}
-
-// View Manager Module
-const ViewManager = {
-  switchToWeather() {
-    AppState.currentView = "weather"
-    document.getElementById("weather-view").classList.add("active")
-    document.getElementById("control-view").classList.remove("active")
-  },
-
-  switchToControl() {
-    AppState.currentView = "control"
-    document.getElementById("weather-view").classList.remove("active")
-    document.getElementById("control-view").classList.add("active")
-  },
-}
-
-// Control Panel Module
-const ControlPanel = {
-  init() {
-    const buttons = document.querySelectorAll(".control-button")
-    buttons.forEach((button) => {
-      button.addEventListener("click", this.handleButtonClick.bind(this))
-    })
-
-    // Retry button
-    const retryButton = document.getElementById("retry-weather")
-    if (retryButton) {
-      retryButton.addEventListener("click", () => {
-        Weather.fetchWeatherData(AppState.currentLocationIndex)
-      })
-    }
-  },
-
-  handleButtonClick(e) {
-    const button = e.currentTarget
-    const buttonId = button.dataset.button
-
-    Utils.triggerHaptic(Config.hapticPatterns.long)
-
-    // Visual feedback
-    button.classList.add("pressed")
+    // Auto remove toast
     setTimeout(() => {
-      button.classList.remove("pressed")
-    }, 200)
-
-    // Add pulse animation
-    button.classList.add("animate-pulse")
-    setTimeout(() => {
-      button.classList.remove("animate-pulse")
-    }, 1000)
-
-    console.log(`Control button ${buttonId} pressed`)
-
-    // Here you can add actual control logic
-    this.executeControlAction(buttonId)
-  },
-
-  executeControlAction(buttonId) {
-    // Placeholder for actual control logic
-    const actions = {
-      1: () => console.log("Oświetlenie toggled"),
-      2: () => console.log("Temperatura adjusted"),
-      3: () => console.log("Bezpieczeństwo checked"),
-      4: () => console.log("System Audio toggled"),
-      5: () => console.log("Wentylacja adjusted"),
-      6: () => console.log("Alarm triggered"),
-    }
-
-    if (actions[buttonId]) {
-      actions[buttonId]()
-    }
-  },
-}
-
-// Time Module
-const TimeManager = {
-  init() {
-    this.updateTime()
-    setInterval(this.updateTime, 1000)
-  },
-
-  updateTime() {
-    const timeElement = document.getElementById("current-time")
-    if (timeElement) {
-      timeElement.textContent = Utils.formatTime()
-    }
-  },
-}
-
-// Network Status Module
-const NetworkStatus = {
-  init() {
-    window.addEventListener("online", this.handleOnline.bind(this))
-    window.addEventListener("offline", this.handleOffline.bind(this))
-    this.checkStatus()
-  },
-
-  handleOnline() {
-    AppState.isOffline = false
-    this.hideOfflineIndicator()
-    // Refresh weather data when back online
-    Weather.fetchWeatherData(AppState.currentLocationIndex)
-  },
-
-  handleOffline() {
-    AppState.isOffline = true
-    this.showOfflineIndicator()
-  },
-
-  checkStatus() {
-    if (!Utils.isOnline()) {
-      this.handleOffline()
-    }
-  },
-
-  showOfflineIndicator() {
-    const indicator = document.getElementById("offline-indicator")
-    if (indicator) {
-      indicator.style.display = "block"
-    }
-  },
-
-  hideOfflineIndicator() {
-    const indicator = document.getElementById("offline-indicator")
-    if (indicator) {
-      indicator.style.display = "none"
-    }
-  },
-}
-
-// App Initialization
-const App = {
-  init() {
-    // Hide loading screen
-    setTimeout(() => {
-      document.getElementById("loading-screen").style.display = "none"
-      document.getElementById("app").style.display = "block"
-    }, 1000)
-
-    // Initialize modules
-    TouchHandler.init()
-    ControlPanel.init()
-    TimeManager.init()
-    NetworkStatus.init()
-
-    // Initialize weather view
-    ViewManager.switchToWeather()
-    Weather.updateLocationIndicators()
-    Weather.fetchWeatherData(AppState.currentLocationIndex)
-
-    // Set up auto-refresh for weather data
-    setInterval(() => {
-      if (AppState.currentView === "weather" && !AppState.isLoading) {
-        Weather.fetchWeatherData(AppState.currentLocationIndex)
+      if (toast.parentNode) {
+        toast.style.opacity = "0"
+        toast.style.transform = "translateX(100%)"
+        setTimeout(() => {
+          toast.remove()
+        }, 300)
       }
-    }, Config.weatherUpdateInterval)
+    }, duration)
 
-    // Initialize lazy loading
-    Utils.lazyLoadImages()
+    // Click to dismiss
+    toast.addEventListener("click", () => {
+      toast.style.opacity = "0"
+      toast.style.transform = "translateX(100%)"
+      setTimeout(() => {
+        toast.remove()
+      }, 300)
+    })
+  }
 
-    console.log("Panel Sterowania initialized successfully")
-  },
-}
-
-// Error Handler
-window.addEventListener("error", (e) => {
-  console.error("Application error:", e.error)
-  // You can add error reporting here
-})
-
-// Unhandled promise rejection handler
-window.addEventListener("unhandledrejection", (e) => {
-  console.error("Unhandled promise rejection:", e.reason)
-  e.preventDefault()
-})
-
-// Initialize app when DOM is loaded
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", App.init)
-} else {
-  App.init()
-}
-
-// Export for debugging (optional)
-if (typeof window !== "undefined") {
-  window.PanelApp = {
-    AppState,
-    Config,
-    Utils,
-    Weather,
-    ViewManager,
-    ControlPanel,
+  // Cleanup method
+  destroy() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval)
+    }
   }
 }
+
+// Lazy loading for images
+class LazyImageLoader {
+  constructor() {
+    this.images = document.querySelectorAll("img[data-src]")
+    this.imageObserver = null
+    this.init()
+  }
+
+  init() {
+    if ("IntersectionObserver" in window) {
+      this.imageObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            this.loadImage(entry.target)
+            this.imageObserver.unobserve(entry.target)
+          }
+        })
+      })
+
+      this.images.forEach((img) => this.imageObserver.observe(img))
+    } else {
+      // Fallback for older browsers
+      this.images.forEach((img) => this.loadImage(img))
+    }
+  }
+
+  loadImage(img) {
+    const src = img.dataset.src
+    if (src) {
+      img.src = src
+      img.classList.add("loaded")
+      img.removeAttribute("data-src")
+    }
+  }
+}
+
+// Performance monitoring
+class PerformanceMonitor {
+  constructor() {
+    this.metrics = {}
+    this.init()
+  }
+
+  init() {
+    // Monitor page load performance
+    window.addEventListener("load", () => {
+      this.measurePageLoad()
+    })
+
+    // Monitor user interactions
+    this.measureUserInteractions()
+  }
+
+  measurePageLoad() {
+    if ("performance" in window) {
+      const navigation = performance.getEntriesByType("navigation")[0]
+      if (navigation) {
+        this.metrics.loadTime = navigation.loadEventEnd - navigation.loadEventStart
+        this.metrics.domContentLoaded = navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart
+        this.metrics.firstPaint = performance
+          .getEntriesByType("paint")
+          .find((entry) => entry.name === "first-paint")?.startTime
+
+        console.log("Performance Metrics:", this.metrics)
+      }
+    }
+  }
+
+  measureUserInteractions() {
+    let interactionCount = 0
+    ;["click", "touch", "keydown"].forEach((eventType) => {
+      document.addEventListener(
+        eventType,
+        () => {
+          interactionCount++
+        },
+        { passive: true },
+      )
+    })
+
+    // Log interaction count every minute
+    setInterval(() => {
+      if (interactionCount > 0) {
+        console.log(`User interactions in last minute: ${interactionCount}`)
+        interactionCount = 0
+      }
+    }, 60000)
+  }
+}
+
+// Initialize app when DOM is loaded
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize main app
+  window.weatherApp = new WeatherApp()
+
+  // Initialize lazy loading
+  window.lazyLoader = new LazyImageLoader()
+
+  // Initialize performance monitoring
+  window.performanceMonitor = new PerformanceMonitor()
+
+  // Global error handling
+  window.addEventListener("error", (event) => {
+    console.error("Global error:", event.error)
+    if (window.weatherApp) {
+      window.weatherApp.showToast("Wystąpił błąd aplikacji", "error")
+    }
+  })
+
+  // Handle unhandled promise rejections
+  window.addEventListener("unhandledrejection", (event) => {
+    console.error("Unhandled promise rejection:", event.reason)
+    if (window.weatherApp) {
+      window.weatherApp.showToast("Wystąpił błąd aplikacji", "error")
+    }
+  })
+})
+
+// Cleanup on page unload
+window.addEventListener("beforeunload", () => {
+  if (window.weatherApp) {
+    window.weatherApp.destroy()
+  }
+})

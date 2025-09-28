@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Panel Sterowania - Wieluń</title>
-    <meta name="description" content="Mobilny panel sterowania z pogodą AccuWeather dla regionu Wieluń. Responsywny design zoptymalizowany dla telefonów.">
-    <meta name="keywords" content="panel sterowania, pogoda, Wieluń, mobile, responsywny">
-    <meta name="author" content="Panel Control System">
+    <title>Panel Sterowania - Wieluń (Offline)</title>
+    <meta name="description" content="Mobilny panel sterowania z pogodą dla regionu Wieluń. Działa offline bez potrzeby serwera.">
+    <meta name="keywords" content="panel sterowania, pogoda, Wieluń, mobile, offline, static">
     
-    <!-- PWA Meta Tags -->
+     PWA Meta Tags 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,212 +16,170 @@
     <meta name="msapplication-TileColor" content="#3b82f6">
     <meta name="theme-color" content="#3b82f6">
     
-    <!-- Icons -->
-    <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./icons/favicon-16x16.png">
+     Icons 
     <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/x-icon" href="./favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
     
-    <!-- Preload Critical Resources -->
+     Preload Critical Resources 
     <link rel="preload" href="./styles.css" as="style">
     <link rel="preload" href="./script.js" as="script">
     
-    <!-- DNS Prefetch (for future API calls) -->
-    <link rel="dns-prefetch" href="//dataservice.accuweather.com">
-    
-    <!-- Styles -->
+     Styles 
     <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-    <!-- Loading Screen -->
+     Loading Screen 
     <div id="loading-screen" class="loading-screen">
         <div class="loading-spinner"></div>
-        <p>Ładowanie Panel Sterowania...</p>
+        <div class="loading-text">Ładowanie panelu...</div>
     </div>
 
-    <!-- Main App Container -->
+     Main App Container 
     <div id="app" class="app-container" style="display: none;">
-        
-        <!-- Weather View -->
-        <div id="weather-view" class="weather-view active">
-            <!-- Location Indicators -->
-            <div class="location-indicators">
-                <div class="indicator active" data-location="0"></div>
-                <div class="indicator" data-location="1"></div>
-                <div class="indicator" data-location="2"></div>
-                <div class="indicator" data-location="3"></div>
-                <div class="indicator" data-location="4"></div>
-            </div>
-
-            <!-- Time Display -->
-            <div class="time-display" id="current-time">
-                00:00
-            </div>
-
-            <!-- Navigation Arrows -->
-            <div class="nav-arrow nav-arrow-up">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="18,15 12,9 6,15"></polyline>
-                </svg>
-            </div>
-            <div class="nav-arrow nav-arrow-down">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6,9 12,15 18,9"></polyline>
-                </svg>
-            </div>
-            <div class="nav-arrow nav-arrow-right">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="9,18 15,12 9,6"></polyline>
-                </svg>
-            </div>
-
-            <!-- Weather Card -->
-            <div class="weather-card" id="weather-card">
-                <div class="weather-content">
-                    <!-- Loading State -->
-                    <div id="weather-loading" class="weather-loading">
-                        <div class="weather-spinner"></div>
-                        <p>Ładowanie...</p>
-                    </div>
-
-                    <!-- Weather Data -->
-                    <div id="weather-data" class="weather-data" style="display: none;">
-                        <div class="weather-location">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                            <span id="location-name">Wieluń</span>
-                        </div>
-
-                        <div class="weather-temperature">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path>
-                            </svg>
-                            <span id="temperature">15°C</span>
-                        </div>
-
-                        <div class="weather-condition">
-                            <p id="condition" class="condition-main">Słonecznie</p>
-                            <p id="description" class="condition-desc">pogodnie i ciepło</p>
-                        </div>
-
-                        <div class="weather-details">
-                            <div class="detail-item">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                </svg>
-                                <span id="humidity">60%</span>
-                            </div>
-                            <div class="detail-item">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"></path>
-                                    <path d="M9.6 4.6A2 2 0 1 1 11 8H2"></path>
-                                    <path d="M12.6 19.4A2 2 0 1 0 14 16H2"></path>
-                                </svg>
-                                <span id="wind-speed">10 km/h</span>
-                            </div>
-                        </div>
-
-                        <div class="weather-timestamp">
-                            Ostatnia aktualizacja: <span id="last-update">--:--</span>
-                        </div>
-                    </div>
-
-                    <!-- Error State -->
-                    <div id="weather-error" class="weather-error" style="display: none;">
-                        <p>Błąd ładowania pogody</p>
-                        <button id="retry-weather" class="retry-button">Spróbuj ponownie</button>
-                    </div>
+         Header 
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">Panel Sterowania</h1>
+                <div class="header-status">
+                    <span id="connection-status" class="status-indicator offline">OFFLINE</span>
+                    <span id="last-update" class="last-update">Ostatnia aktualizacja: nigdy</span>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <!-- Control Panel View -->
-        <div id="control-view" class="control-view">
+         Weather Section 
+        <section class="weather-section">
+            <div class="section-header">
+                <h2>Pogoda w regionie</h2>
+                <button id="refresh-weather" class="refresh-btn" aria-label="Odśwież pogodę">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                        <path d="M21 3v5h-5"/>
+                        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                        <path d="M3 21v-5h5"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="weather-grid" id="weather-grid">
+                 Weather cards will be populated by JavaScript 
+            </div>
+        </section>
+
+         Control Panel Section 
+        <section class="control-section">
+            <div class="section-header">
+                <h2>Panel sterowania</h2>
+                <div class="control-status">
+                    <span id="control-status" class="status-text">Gotowy</span>
+                </div>
+            </div>
+            
             <div class="control-grid">
-                <button class="control-button control-button-1" data-button="1">
-                    <div class="button-content">
-                        <div class="button-label">Oświetlenie</div>
-                        <div class="button-sublabel">Panel 1</div>
+                <button class="control-btn control-lighting" data-action="lighting">
+                    <div class="control-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                        </svg>
                     </div>
+                    <span class="control-label">Oświetlenie</span>
+                    <span class="control-status-indicator" id="lighting-status">OFF</span>
                 </button>
-                
-                <button class="control-button control-button-2" data-button="2">
-                    <div class="button-content">
-                        <div class="button-label">Temperatura</div>
-                        <div class="button-sublabel">Panel 2</div>
+
+                <button class="control-btn control-temperature" data-action="temperature">
+                    <div class="control-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/>
+                        </svg>
                     </div>
+                    <span class="control-label">Temperatura</span>
+                    <span class="control-status-indicator" id="temperature-status">22°C</span>
                 </button>
-                
-                <button class="control-button control-button-3" data-button="3">
-                    <div class="button-content">
-                        <div class="button-label">Bezpieczeństwo</div>
-                        <div class="button-sublabel">Panel 3</div>
+
+                <button class="control-btn control-security" data-action="security">
+                    <div class="control-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                        </svg>
                     </div>
+                    <span class="control-label">Bezpieczeństwo</span>
+                    <span class="control-status-indicator" id="security-status">AKTYWNE</span>
                 </button>
-                
-                <button class="control-button control-button-4" data-button="4">
-                    <div class="button-content">
-                        <div class="button-label">System Audio</div>
-                        <div class="button-sublabel">Panel 4</div>
+
+                <button class="control-btn control-ventilation" data-action="ventilation">
+                    <div class="control-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3A2 2 0 0 1 18 16H6a4 4 0 0 1-4-4 4.07 4.07 0 0 1 .09-.8A6 6 0 0 1 12 4c.8 0 1.6.1 2.3.3"/>
+                        </svg>
                     </div>
+                    <span class="control-label">Wentylacja</span>
+                    <span class="control-status-indicator" id="ventilation-status">AUTO</span>
                 </button>
-                
-                <button class="control-button control-button-5" data-button="5">
-                    <div class="button-content">
-                        <div class="button-label">Wentylacja</div>
-                        <div class="button-sublabel">Panel 5</div>
+
+                <button class="control-btn control-energy" data-action="energy">
+                    <div class="control-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
                     </div>
+                    <span class="control-label">Energia</span>
+                    <span class="control-status-indicator" id="energy-status">85%</span>
                 </button>
-                
-                <button class="control-button control-button-6" data-button="6">
-                    <div class="button-content">
-                        <div class="button-label">Alarm</div>
-                        <div class="button-sublabel">Panel 6</div>
+
+                <button class="control-btn control-water" data-action="water">
+                    <div class="control-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/>
+                            <path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2.04 4.6 4.14 5.93a3.83 3.83 0 0 1 1.86 3.3c0 2.22-1.8 4.05-4 4.05-.5 0-1.01-.16-1.44-.47l1.44-1.47"/>
+                        </svg>
                     </div>
+                    <span class="control-label">Woda</span>
+                    <span class="control-status-indicator" id="water-status">OK</span>
                 </button>
             </div>
+        </section>
 
-            <!-- Back Arrow -->
-            <div class="nav-arrow nav-arrow-left">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="15,18 9,12 15,6"></polyline>
-                </svg>
+         Footer 
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p class="footer-text">Panel Sterowania v1.0 | Offline Mode</p>
+                <div class="footer-actions">
+                    <button id="install-btn" class="install-btn" style="display: none;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Zainstaluj aplikację
+                    </button>
+                </div>
             </div>
-        </div>
+        </footer>
     </div>
 
-    <!-- Offline Indicator -->
-    <div id="offline-indicator" class="offline-indicator" style="display: none;">
-        <span>Tryb offline</span>
-    </div>
+     Toast Notifications 
+    <div id="toast-container" class="toast-container"></div>
 
-    <!-- Scripts -->
+     Scripts 
     <script src="./script.js"></script>
     
-    <!-- Service Worker Registration -->
+     Service Worker Registration 
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
+            window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(function(registration) {
+                    .then(registration => {
                         console.log('SW registered: ', registration);
                     })
-                    .catch(function(registrationError) {
+                    .catch(registrationError => {
                         console.log('SW registration failed: ', registrationError);
                     });
             });
         }
     </script>
-
-    <!-- No Script Fallback -->
-    <noscript>
-        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; text-align: center; padding: 20px; z-index: 10000;">
-            Ta aplikacja wymaga JavaScript do działania.<br>
-            Włącz JavaScript w swojej przeglądarce.
-        </div>
-    </noscript>
 </body>
 </html>

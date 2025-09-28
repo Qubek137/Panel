@@ -1,70 +1,123 @@
 #!/bin/bash
 
-# Skrypt do optymalizacji obrazów (WebP conversion)
+# Image optimization script
+echo "🖼️ Optimizing images for web..."
 
-echo "🖼️  Optymalizacja obrazów..."
-echo ""
+# Create optimized images directory
+mkdir -p public/images/optimized
 
-# Sprawdź czy cwebp jest zainstalowane
-if ! command -v cwebp &> /dev/null; then
-    echo "❌ cwebp nie jest zainstalowane!"
-    echo ""
-    echo "Instalacja:"
-    echo "Ubuntu/Debian: sudo apt install webp"
-    echo "macOS: brew install webp"
-    echo "Termux: pkg install libwebp"
-    exit 1
-fi
-
-# Funkcja do konwersji PNG/JPG na WebP
-convert_to_webp() {
+# Function to convert and optimize images
+optimize_image() {
     local input_file="$1"
-    local output_file="${input_file%.*}.webp"
-    local quality="${2:-80}"
+    local output_file="$2"
+    local quality="$3"
     
-    echo "🔄 Konwertowanie: $input_file -> $output_file"
-    cwebp -q "$quality" "$input_file" -o "$output_file"
-    
-    if [ $? -eq 0 ]; then
-        # Pokaż oszczędność miejsca
-        original_size=$(wc -c < "$input_file")
-        webp_size=$(wc -c < "$output_file")
-        savings=$((100 - (webp_size * 100 / original_size)))
-        echo "✅ Oszczędność: ${savings}%"
+    if command -v cwebp >/dev/null 2>&1; then
+        # Use WebP if available
+        cwebp -q "$quality" "$input_file" -o "${output_file%.png}.webp"
+        echo "✅ Converted $input_file to WebP"
+    elif command -v convert >/dev/null 2>&1; then
+        # Use ImageMagick if available
+        convert "$input_file" -quality "$quality" -strip "$output_file"
+        echo "✅ Optimized $input_file"
     else
-        echo "❌ Błąd konwersji: $input_file"
+        # Fallback - just copy
+        cp "$input_file" "$output_file"
+        echo "⚠️ No optimization tools found, copied $input_file"
     fi
 }
 
-# Konwertuj obrazy w folderze public/images
+# Optimize existing images
 if [ -d "public/images" ]; then
-    echo "📁 Przetwarzanie public/images..."
-    find public/images -type f $$ -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" $$ | while read -r file; do
-        convert_to_webp "$file" 85
+    for img in public/images/*.{png,jpg,jpeg}; do
+        if [ -f "$img" ]; then
+            filename=$(basename "$img")
+            optimize_image "$img" "public/images/optimized/$filename" 80
+        fi
     done
 fi
 
-# Konwertuj ikony (niższa jakość dla mniejszych plików)
-if [ -d "public/icons" ]; then
-    echo "📁 Przetwarzanie public/icons..."
-    find public/icons -type f $$ -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" $$ | while read -r file; do
-        convert_to_webp "$file" 90
+# Generate favicon in multiple sizes if source exists
+if [ -f "public/favicon-source.png" ]; then
+    echo "🎯 Generating favicon variants..."
+    
+    sizes=(16 32 72 96 128 144 152 192 384 512)
+    
+    for size in "${sizes[@]}"; do
+        if command -v convert >/dev/null 2>&1; then
+            convert public/favicon-source.png -resize "${size}x${size}" "public/icon-${size}x${size}.png"
+            echo "✅ Generated ${size}x${size} icon"
+        fi
     done
+    
+    # Generate ICO file
+    if command -v convert >/dev/null 2>&1; then
+        convert public/favicon-source.png -resize 32x32 public/favicon.ico
+        echo "✅ Generated favicon.ico"
+    fi
+    
+    # Generate Apple touch icon
+    if command -v convert >/dev/null 2>&1; then
+        convert public/favicon-source.png -resize 180x180 public/apple-touch-icon.png
+        echo "✅ Generated Apple touch icon"
+    fi
 fi
 
-# Optymalizuj screenshoty
-if [ -f "public/images/screenshot-mobile-weather.png" ]; then
-    convert_to_webp "public/images/screenshot-mobile-weather.png" 75
+# Create placeholder images if they don't exist
+create_placeholder() {
+    local width="$1"
+    local height="$2"
+    local filename="$3"
+    local text="$4"
+    
+    if command -v convert >/dev/null 2>&1; then
+        convert -size "${width}x${height}" xc:#3b82f6 \
+                -fill white -gravity center \
+                -pointsize 24 -annotate +0+0 "$text" \
+                "public/$filename"
+        echo "✅ Created placeholder: $filename"
+    fi
+}
+
+# Create screenshot placeholders if they don't exist
+if [ ! -f "public/images/screenshot-mobile-weather.webp" ]; then
+    create_placeholder 390 844 "images/screenshot-mobile-weather.png" "Weather\nView"
+    if command -v cwebp >/dev/null 2>&1; then
+        cwebp -q 80 "public/images/screenshot-mobile-weather.png" -o "public/images/screenshot-mobile-weather.webp"
+        rm "public/images/screenshot-mobile-weather.png"
+    fi
 fi
 
-if [ -f "public/images/screenshot-mobile-control.png" ]; then
-    convert_to_webp "public/images/screenshot-mobile-control.png" 75
+if [ ! -f "public/images/screenshot-mobile-control.webp" ]; then
+    create_placeholder 390 844 "images/screenshot-mobile-control.png" "Control\nPanel"
+    if command -v cwebp >/dev/null 2>&1; then
+        cwebp -q 80 "public/images/screenshot-mobile-control.png" -o "public/images/screenshot-mobile-control.webp"
+        rm "public/images/screenshot-mobile-control.png"
+    fi
 fi
 
-echo ""
-echo "✅ Optymalizacja obrazów zakończona!"
-echo ""
-echo "💡 Wskazówki:"
-echo "- Użyj obrazów WebP w HTML: <img src='image.webp' alt='...'>"
-echo "- Dodaj fallback: <img src='image.webp' onerror=\"this.src='image.png'\">"
-echo "- Lazy loading: <img src='image.webp' loading='lazy'>"
+# Compress CSS and JS files
+echo "🗜️ Compressing CSS and JS files..."
+
+if command -v terser >/dev/null 2>&1; then
+    terser public/script.js -c -m -o public/script.min.js
+    echo "✅ Minified JavaScript"
+fi
+
+if command -v cleancss >/dev/null 2>&1; then
+    cleancss -o public/styles.min.css public/styles.css
+    echo "✅ Minified CSS"
+fi
+
+# Generate image optimization report
+echo "📊 Image optimization report:"
+echo "   - Original images: $(find public -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" | wc -l)"
+echo "   - WebP images: $(find public -name "*.webp" | wc -l)"
+echo "   - Icon variants: $(find public -name "icon-*.png" | wc -l)"
+echo "   - Total image size: $(du -sh public/images 2>/dev/null | cut -f1 || echo "N/A")"
+
+echo "🎉 Image optimization complete!"
+echo "💡 Tips:"
+echo "   - Use WebP format for better compression"
+echo "   - Implement lazy loading for better performance"
+echo "   - Consider using responsive images with srcset"

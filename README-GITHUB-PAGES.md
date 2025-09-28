@@ -1,24 +1,10 @@
 # Panel Sterowania - GitHub Pages
 
-Responsywna strona mobilna w 100% kompatybilna z GitHub Pages.
+Mobilny panel sterowania z pogodą dla regionu Wieluń. Aplikacja działa w 100% offline bez potrzeby serwera.
 
-## 🚀 Szybki start
+## 🚀 Wdrożenie na GitHub Pages
 
-### 1. Struktura plików
-
-\`\`\`
-public/
-├── index.html          # Główna strona
-├── styles.css          # Style CSS (bez Tailwind)
-├── script.js           # JavaScript aplikacji
-├── manifest.json       # PWA manifest
-├── sw.js              # Service Worker
-├── offline.html       # Strona offline
-├── images/            # Obrazy WebP
-└── icons/             # Ikony PWA
-\`\`\`
-
-### 2. Wdrożenie na GitHub Pages
+### Automatyczne wdrożenie
 
 \`\`\`bash
 # 1. Zbuduj wersję GitHub Pages
@@ -26,225 +12,220 @@ public/
 
 # 2. Commit i push
 git add docs/
-git commit -m "Deploy to GitHub Pages"
+git commit -m "Deploy GitHub Pages version"
 git push origin main
-
-# 3. Włącz GitHub Pages w ustawieniach repo
-# Settings > Pages > Source: Deploy from branch
-# Branch: main, Folder: /docs
 \`\`\`
 
-## 🎯 Funkcje
+### Konfiguracja w GitHub
 
-### ✅ W pełni lokalne
-- ❌ **Brak zewnętrznych CDN**
-- ✅ Wszystkie pliki lokalne
-- ✅ Obrazy WebP (skompresowane)
-- ✅ Lazy loading obrazów
-- ✅ Service Worker (offline)
+1. Przejdź do **Settings** → **Pages**
+2. Wybierz **Source**: "Deploy from a branch"
+3. Wybierz **Branch**: `main`
+4. Wybierz **Folder**: `/docs`
+5. Kliknij **Save**
 
-### ✅ Responsywny design
-- 📱 **320px+** - Bardzo małe telefony
-- 📱 **360px+** - Standardowe telefony  
-- 📱 **768px+** - Tablety
-- 💻 **1024px+** - Desktop
+### Własna domena (opcjonalnie)
 
-### ✅ PWA Features
-- 📱 Instalowalna jako aplikacja
-- 🔄 Działa offline
-- 🔔 Push notifications (gotowe)
-- 📊 Background sync
-
-## 🛠️ Technologie
-
-### Vanilla Stack
-- **HTML5** - Semantyczny markup
-- **CSS3** - Flexbox, Grid, Custom Properties
-- **JavaScript ES6+** - Modules, Classes, Async/Await
-- **Service Worker** - Offline support
-- **Web App Manifest** - PWA
-
-### Brak frameworków
-- ❌ React/Vue/Angular
-- ❌ Tailwind/Bootstrap
-- ❌ jQuery
-- ✅ Vanilla JavaScript
-- ✅ Pure CSS
-
-## 📱 Funkcjonalność
-
-### Pogoda (Offline)
-- 🌤️ 5 lokalizacji (Wieluń, Łódź, Warszawa...)
-- 🔄 Automatyczne odświeżanie
-- 📊 Temperatura, wilgotność, wiatr
-- 🕒 Timestamp ostatniej aktualizacji
-
-### Panel sterowania
-- 🎛️ 6 przycisków sterowania
-- 💫 Haptic feedback (wibracje)
-- 🎨 Kolorowe przyciski z gradientami
-- ⚡ Animacje i przejścia
-
-### Gesty dotykowe
-- ⬅️➡️ Swipe poziomy - zmiana widoku
-- ⬆️⬇️ Swipe pionowy - zmiana lokalizacji
-- 👆 Tap - aktywacja przycisków
-- 📳 Haptic feedback
-
-## 🎨 Personalizacja
-
-### Zmiana kolorów
-\`\`\`css
-/* public/styles.css */
-:root {
-    --primary-color: #3b82f6;    /* Niebieski */
-    --primary-dark: #1e40af;     /* Ciemny niebieski */
-    --text-primary: #1f2937;     /* Ciemny tekst */
-}
-\`\`\`
-
-### Dodanie nowych przycisków
-\`\`\`javascript
-// public/script.js - ControlPanel.executeControlAction()
-const actions = {
-    '7': () => console.log('Nowy przycisk'),
-    // ...
-};
-\`\`\`
-
-### Zmiana lokalizacji pogodowych
-\`\`\`javascript
-// public/script.js - Config.locations
-const Config = {
-    locations: [
-        { name: "Nowa Lokalizacja", locationKey: "123456" }
-    ]
-};
-\`\`\`
-
-## 🔧 Optymalizacja
-
-### Obrazy WebP
 \`\`\`bash
-# Konwertuj obrazy na WebP
-./scripts/optimize-images.sh
-
-# Ręczna konwersja
-cwebp -q 80 input.png -o output.webp
+# Ustaw zmienną środowiskową przed budowaniem
+export CUSTOM_DOMAIN="twoja-domena.com"
+./scripts/build-github-pages.sh
 \`\`\`
 
-### Lazy Loading
+## 📱 Funkcje aplikacji
+
+### ✅ Pogoda offline
+- **5 lokalizacji**: Wieluń, Częstochowa, Kalisz, Łódź, Sieradz
+- **Symulacja danych**: Realistyczne dane pogodowe
+- **Auto-refresh**: Aktualizacja co 5 minut
+- **Animacje**: Smooth transitions i loading states
+
+### 🎛️ Panel sterowania
+- **6 systemów**: Oświetlenie, Temperatura, Bezpieczeństwo, Wentylacja, Energia, Woda
+- **Haptic feedback**: Wibracje na dotyk (mobile)
+- **Status tracking**: Śledzenie stanu wszystkich systemów
+- **Toast notifications**: Powiadomienia o akcjach
+
+### 📱 PWA Features
+- **Instalowalna**: Dodaj do ekranu głównego
+- **Offline-first**: Działa bez internetu
+- **Service Worker**: Zaawansowane cache'owanie
+- **Responsive**: Dostosowana do wszystkich urządzeń
+
+## 🛠️ Struktura plików
+
+\`\`\`
+docs/                          # GitHub Pages deployment
+├── index.html                 # Główna strona aplikacji
+├── styles.css                 # Style CSS (bez frameworków)
+├── script.js                  # Vanilla JavaScript
+├── manifest.json              # PWA manifest
+├── sw.js                      # Service Worker
+├── offline.html               # Strona offline
+├── images/                    # Obrazy WebP
+│   ├── screenshot-mobile-weather.webp
+│   └── screenshot-mobile-control.webp
+├── icon-*.png                 # Ikony PWA (różne rozmiary)
+├── favicon.ico                # Favicon
+├── robots.txt                 # SEO
+├── sitemap.xml                # Mapa strony
+└── .nojekyll                  # Bypass Jekyll
+\`\`\`
+
+## 🎨 Technologie
+
+### Frontend Stack
+- **HTML5**: Semantyczny markup
+- **CSS3**: Custom Properties, Flexbox, Grid
+- **JavaScript ES6+**: Modules, Classes, Async/Await
+- **PWA**: Service Worker, Web App Manifest
+
+### Optymalizacje
+- **WebP images**: 50-80% mniejsze pliki
+- **Lazy loading**: Ładowanie obrazów na żądanie
+- **CSS/JS minification**: Kompresja plików
+- **Gzip compression**: Automatyczna kompresja GitHub Pages
+
+### Responsywność
+- **Mobile-first**: Projektowanie od najmniejszych ekranów
+- **Breakpoints**: 320px, 480px, 768px, 1024px+
+- **Touch-friendly**: Duże obszary dotykowe
+- **Landscape support**: Orientacja pozioma
+
+## 🔧 Rozwój lokalny
+
+### Wymagania
+- Przeglądarka z obsługą Service Workers
+- Serwer HTTP (np. `python -m http.server`)
+
+### Uruchomienie
+\`\`\`bash
+# Serwuj pliki lokalnie
+cd docs
+python -m http.server 8000
+
+# Lub użyj Node.js
+npx serve .
+
+# Otwórz http://localhost:8000
+\`\`\`
+
+### Testowanie PWA
+\`\`\`bash
+# Testuj Service Worker
+chrome://inspect/#service-workers
+
+# Testuj offline mode
+DevTools → Network → Offline
+
+# Testuj instalację
+DevTools → Application → Manifest
+\`\`\`
+
+## 📊 Performance
+
+### Lighthouse Score (cel)
+- **Performance**: 95+
+- **Accessibility**: 100
+- **Best Practices**: 100
+- **SEO**: 95+
+- **PWA**: 100
+
+### Core Web Vitals
+- **LCP**: < 2.5s (Largest Contentful Paint)
+- **FID**: < 100ms (First Input Delay)
+- **CLS**: < 0.1 (Cumulative Layout Shift)
+
+### Optymalizacje
+- **Critical CSS**: Inline w `<head>`
+- **Resource hints**: Preload, prefetch
+- **Image optimization**: WebP + lazy loading
+- **Code splitting**: Modularny JavaScript
+
+## 🔒 Bezpieczeństwo
+
+### Content Security Policy
 \`\`\`html
-<!-- Automatyczne lazy loading -->
-<img src="image.webp" loading="lazy" alt="Opis">
-
-<!-- Z fallback -->
-<img src="image.webp" 
-     onerror="this.src='image.png'" 
-     loading="lazy" 
-     alt="Opis">
+<meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self'; 
+               script-src 'self' 'unsafe-inline'; 
+               style-src 'self' 'unsafe-inline';">
 \`\`\`
 
-### Service Worker Cache
-\`\`\`javascript
-// Automatyczne cachowanie plików
-const STATIC_FILES = [
-    './',
-    './index.html',
-    './styles.css',
-    './script.js'
-];
-\`\`\`
+### HTTPS
+- GitHub Pages automatycznie wymusza HTTPS
+- Service Worker wymaga HTTPS do działania
 
-## 📊 Wydajność
-
-### Rozmiary plików
-- **HTML**: ~15KB (gzipped: ~5KB)
-- **CSS**: ~25KB (gzipped: ~7KB)  
-- **JavaScript**: ~20KB (gzipped: ~6KB)
-- **Obrazy WebP**: ~50-80% mniejsze niż PNG
-- **Całość**: ~2-3MB (z ikonami)
-
-### Czas ładowania
-- **First Paint**: <1s
-- **Interactive**: <2s
-- **Offline**: Instant (po cache)
-
-## 🔍 SEO & Accessibility
+## 🌐 SEO
 
 ### Meta tags
+- Open Graph dla social media
+- Twitter Cards
+- Structured data (JSON-LD)
+
+### Sitemap
+- Automatycznie generowany `sitemap.xml`
+- Rejestracja w Google Search Console
+
+## 📈 Analytics (opcjonalnie)
+
+### Google Analytics 4
 \`\`\`html
-<meta name="description" content="...">
-<meta name="keywords" content="...">
-<meta property="og:title" content="...">
-<meta property="og:description" content="...">
-\`\`\`
-
-### Accessibility
-- ✅ Semantic HTML
-- ✅ ARIA labels
-- ✅ Keyboard navigation
-- ✅ Screen reader support
-- ✅ High contrast mode
-- ✅ Reduced motion support
-
-## 🚨 Rozwiązywanie problemów
-
-### Aplikacja nie ładuje się
-1. **Sprawdź console** (F12)
-2. **Wyczyść cache** (Ctrl+Shift+R)
-3. **Sprawdź Service Worker** (Application tab)
-
-### Obrazy nie wyświetlają się
-1. **Sprawdź ścieżki** - relatywne do index.html
-2. **Konwertuj na WebP** - `./scripts/optimize-images.sh`
-3. **Dodaj fallback** - `onerror="this.src='backup.png'"`
-
-### GitHub Pages nie działa
-1. **Sprawdź folder docs/** - musi zawierać index.html
-2. **Włącz Pages** - Settings > Pages > /docs
-3. **Sprawdź branch** - main/master
-4. **Poczekaj** - może potrwać 10 minut
-
-## 📈 Analytics & Monitoring
-
-### Google Analytics (opcjonalne)
-\`\`\`html
-<!-- Dodaj przed </head> -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=GA_ID"></script>
+ Dodaj przed </head> 
+<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'GA_ID');
+  gtag('config', 'GA_MEASUREMENT_ID');
 </script>
 \`\`\`
 
-### Error Monitoring
+## 🐛 Debugging
+
+### Service Worker
 \`\`\`javascript
-// public/script.js - już zaimplementowane
-window.addEventListener('error', (e) => {
-    console.error('App error:', e.error);
-    // Wyślij do serwisu monitoringu
+// W DevTools Console
+navigator.serviceWorker.getRegistrations().then(registrations => {
+  registrations.forEach(registration => registration.unregister());
 });
 \`\`\`
 
-## 🔄 Aktualizacje
-
-### Wersjonowanie
+### Cache
 \`\`\`javascript
-// public/sw.js
-const CACHE_NAME = 'panel-sterowania-v1.0.1'; // Zwiększ wersję
+// Wyczyść cache
+caches.keys().then(names => {
+  names.forEach(name => caches.delete(name));
+});
 \`\`\`
 
-### Auto-update
-\`\`\`javascript
-// Service Worker automatycznie aktualizuje cache
-// Użytkownicy dostaną nową wersję przy następnym odwiedzeniu
-\`\`\`
+## 📝 Changelog
+
+### v1.0.0 (2024-01-XX)
+- ✅ Pierwsza wersja GitHub Pages
+- ✅ Pełna funkcjonalność offline
+- ✅ PWA z Service Worker
+- ✅ Responsywny design
+- ✅ WebP images + lazy loading
+
+## 🤝 Contributing
+
+1. Fork repository
+2. Stwórz branch: `git checkout -b feature/nazwa`
+3. Commit: `git commit -m 'Add feature'`
+4. Push: `git push origin feature/nazwa`
+5. Stwórz Pull Request
+
+## 📄 Licencja
+
+MIT License - zobacz [LICENSE](LICENSE) dla szczegółów.
+
+## 🆘 Wsparcie
+
+- **Issues**: [GitHub Issues](../../issues)
+- **Dokumentacja**: [Wiki](../../wiki)
+- **Email**: support@example.com
 
 ---
 
-**🎉 Aplikacja gotowa do wdrożenia na GitHub Pages!**
-
-**URL przykładowy**: `https://username.github.io/repository-name/`
+**Panel Sterowania** - Mobilna aplikacja PWA dla regionu Wieluń 🏠📱

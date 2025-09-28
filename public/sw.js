@@ -4,8 +4,8 @@
  */
 
 const CACHE_NAME = "panel-sterowania-v1.0.0"
-const STATIC_CACHE_NAME = "panel-static-v1.0.0"
-const DYNAMIC_CACHE_NAME = "panel-dynamic-v1.0.0"
+const STATIC_CACHE = "static-v1.0.0"
+const DYNAMIC_CACHE = "dynamic-v1.0.0"
 
 // Files to cache immediately
 const STATIC_FILES = [
@@ -15,15 +15,12 @@ const STATIC_FILES = [
   "./script.js",
   "./manifest.json",
   "./offline.html",
-  "./icons/icon-192x192.png",
-  "./icons/icon-512x512.png",
-  "./icons/apple-touch-icon.png",
-  "./icons/favicon-32x32.png",
-  "./icons/favicon-16x16.png",
+  "./favicon.ico",
+  "./icon-192x192.png",
+  "./icon-512x512.png",
+  "./images/screenshot-mobile-weather.webp",
+  "./images/screenshot-mobile-control.webp",
 ]
-
-// Files to cache on demand
-const DYNAMIC_FILES = ["./images/", "./icons/"]
 
 // Install event - cache static files
 self.addEventListener("install", (event) => {
@@ -31,7 +28,7 @@ self.addEventListener("install", (event) => {
 
   event.waitUntil(
     caches
-      .open(STATIC_CACHE_NAME)
+      .open(STATIC_CACHE)
       .then((cache) => {
         console.log("Service Worker: Caching static files")
         return cache.addAll(STATIC_FILES)
@@ -56,7 +53,7 @@ self.addEventListener("activate", (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE_NAME && cacheName !== DYNAMIC_CACHE_NAME) {
+            if (cacheName !== STATIC_CACHE && cacheName !== DYNAMIC_CACHE) {
               console.log("Service Worker: Deleting old cache", cacheName)
               return caches.delete(cacheName)
             }
@@ -97,7 +94,7 @@ self.addEventListener("fetch", (event) => {
       return fetch(request)
         .then((networkResponse) => {
           // Don't cache if not successful
-          if (!networkResponse || networkResponse.status !== 200) {
+          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== "basic") {
             return networkResponse
           }
 
@@ -105,48 +102,63 @@ self.addEventListener("fetch", (event) => {
           const responseToCache = networkResponse.clone()
 
           // Cache dynamic content
-          if (shouldCacheDynamically(request.url)) {
-            caches.open(DYNAMIC_CACHE_NAME).then((cache) => {
-              console.log("Service Worker: Caching dynamic file", request.url)
-              cache.put(request, responseToCache)
-            })
-          }
+          caches.open(DYNAMIC_CACHE).then((cache) => {
+            console.log("Service Worker: Caching dynamic resource", request.url)
+            cache.put(request, responseToCache)
+          })
 
           return networkResponse
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log("Service Worker: Network request failed", error)
+
           // Network failed, try to serve offline page for navigation requests
           if (request.destination === "document") {
             return caches.match("./offline.html")
           }
 
           // For other requests, return a basic offline response
-          return new Response("Offline", {
+          return new Response("Offline - content not available", {
             status: 503,
             statusText: "Service Unavailable",
+            headers: new Headers({
+              "Content-Type": "text/plain",
+            }),
           })
         })
     }),
   )
 })
 
-// Background sync for weather data
+// Background sync for when connection is restored
 self.addEventListener("sync", (event) => {
   console.log("Service Worker: Background sync", event.tag)
 
   if (event.tag === "weather-sync") {
-    event.waitUntil(syncWeatherData())
+    event.waitUntil(
+      // Notify the main app that connection is restored
+      self.clients
+        .matchAll()
+        .then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({
+              type: "SYNC_WEATHER",
+              message: "Connection restored - syncing weather data",
+            })
+          })
+        }),
+    )
   }
 })
 
 // Push notifications (for future use)
 self.addEventListener("push", (event) => {
-  console.log("Service Worker: Push received", event)
+  console.log("Service Worker: Push notification received")
 
   const options = {
-    body: event.data ? event.data.text() : "Panel Sterowania - Nowa aktualizacja",
-    icon: "./icons/icon-192x192.png",
-    badge: "./icons/icon-72x72.png",
+    body: event.data ? event.data.text() : "Nowa aktualizacja dostępna",
+    icon: "./icon-192x192.png",
+    badge: "./icon-72x72.png",
     vibrate: [200, 100, 200],
     data: {
       dateOfArrival: Date.now(),
@@ -156,12 +168,12 @@ self.addEventListener("push", (event) => {
       {
         action: "explore",
         title: "Otwórz aplikację",
-        icon: "./icons/icon-192x192.png",
+        icon: "./icon-96x96.png",
       },
       {
         action: "close",
         title: "Zamknij",
-        icon: "./icons/icon-192x192.png",
+        icon: "./icon-96x96.png",
       },
     ],
   }
@@ -169,44 +181,30 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification("Panel Sterowania", options))
 })
 
-// Notification click handler
+// Handle notification clicks
 self.addEventListener("notificationclick", (event) => {
   console.log("Service Worker: Notification clicked", event)
 
   event.notification.close()
 
   if (event.action === "explore") {
-    event.waitUntil(clients.openWindow("./"))
+    event.waitUntil(
+      self.clients.matchAll().then((clients) => {
+        // Check if app is already open
+        const client = clients.find((c) => c.visibilityState === "visible")
+        if (client) {
+          client.navigate("./index.html")
+          client.focus()
+        } else {
+          // Open new window/tab
+          self.clients.openWindow("./index.html")
+        }
+      }),
+    )
   }
 })
 
-// Helper functions
-function shouldCacheDynamically(url) {
-  return DYNAMIC_FILES.some((pattern) => url.includes(pattern))
-}
-
-async function syncWeatherData() {
-  try {
-    console.log("Service Worker: Syncing weather data...")
-
-    // Get all clients
-    const clients = await self.clients.matchAll()
-
-    // Send message to clients to refresh weather data
-    clients.forEach((client) => {
-      client.postMessage({
-        type: "WEATHER_SYNC",
-        timestamp: Date.now(),
-      })
-    })
-
-    console.log("Service Worker: Weather sync completed")
-  } catch (error) {
-    console.error("Service Worker: Weather sync failed", error)
-  }
-}
-
-// Message handler for communication with main app
+// Handle messages from main app
 self.addEventListener("message", (event) => {
   console.log("Service Worker: Message received", event.data)
 
@@ -214,24 +212,49 @@ self.addEventListener("message", (event) => {
     self.skipWaiting()
   }
 
-  if (event.data && event.data.type === "CACHE_WEATHER_DATA") {
-    // Cache weather data for offline use
-    caches.open(DYNAMIC_CACHE_NAME).then((cache) => {
-      const response = new Response(JSON.stringify(event.data.weatherData), {
-        headers: { "Content-Type": "application/json" },
-      })
-      return cache.put("./api/weather/current", response)
+  if (event.data && event.data.type === "GET_VERSION") {
+    event.ports[0].postMessage({
+      version: CACHE_NAME,
     })
   }
 })
 
-// Periodic background sync (if supported)
+// Periodic background sync (for future use)
 self.addEventListener("periodicsync", (event) => {
   console.log("Service Worker: Periodic sync", event.tag)
 
   if (event.tag === "weather-update") {
-    event.waitUntil(syncWeatherData())
+    event.waitUntil(
+      // Update weather data in background
+      updateWeatherData(),
+    )
   }
+})
+
+// Helper function to update weather data
+async function updateWeatherData() {
+  try {
+    // This would normally fetch from an API
+    // For now, just notify clients to refresh
+    const clients = await self.clients.matchAll()
+    clients.forEach((client) => {
+      client.postMessage({
+        type: "WEATHER_UPDATE",
+        message: "Weather data updated in background",
+      })
+    })
+  } catch (error) {
+    console.error("Service Worker: Error updating weather data", error)
+  }
+}
+
+// Error handling
+self.addEventListener("error", (event) => {
+  console.error("Service Worker: Error", event.error)
+})
+
+self.addEventListener("unhandledrejection", (event) => {
+  console.error("Service Worker: Unhandled promise rejection", event.reason)
 })
 
 console.log("Service Worker: Script loaded")
