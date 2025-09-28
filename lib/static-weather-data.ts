@@ -1,21 +1,8 @@
-export interface WeatherData {
-  location: string
-  temperature: number
-  humidity: number
-  windSpeed: number
-  condition: string
-  description: string
-  icon: string
-  timestamp: number
-  sunrise?: string
-  sunset?: string
-  pressure?: number
-  visibility?: number
-  uvIndex?: number
-  feelsLike?: number
-  dewPoint?: number
-  hourlyForecast?: HourlyWeather[]
-  dailyForecast?: DailyWeather[]
+export interface Location {
+  name: string
+  latitude: number
+  longitude: number
+  locationKey: string
 }
 
 export interface HourlyWeather {
@@ -34,6 +21,7 @@ export interface HourlyWeather {
 
 export interface DailyWeather {
   date: string
+  dayName: string
   maxTemp: number
   minTemp: number
   weatherCode: number
@@ -43,24 +31,55 @@ export interface DailyWeather {
   sunset: string
   precipitation: number
   windSpeed: number
+  humidity: number
+  uvIndex: number
 }
 
-export interface Location {
-  name: string
-  locationKey: string
-  latitude: number
-  longitude: number
+export interface WeatherData {
+  location: string
+  temperature: number
+  humidity: number
+  windSpeed: number
+  condition: string
+  description: string
+  icon: string
+  timestamp: number
+  sunrise?: string
+  sunset?: string
+  pressure?: number
+  visibility?: number
+  uvIndex?: number
+  feelsLike?: number
+  dewPoint?: number
+  minTemp?: number
+  maxTemp?: number
+  hourlyForecast?: HourlyWeather[]
+  dailyForecast?: DailyWeather[]
 }
 
 export const locations: Location[] = [
-  { name: "Konopnica", locationKey: "konopnica", latitude: 51.221, longitude: 18.5696 },
-  { name: "Warszawa", locationKey: "warszawa", latitude: 52.2298, longitude: 21.0118 },
-  { name: "Wieluń", locationKey: "wielun", latitude: 51.3538, longitude: 18.8236 },
+  {
+    name: "Konopnica",
+    latitude: 51.2465,
+    longitude: 18.4712,
+    locationKey: "konopnica",
+  },
+  {
+    name: "Wieluń",
+    latitude: 51.2167,
+    longitude: 18.5667,
+    locationKey: "wielun",
+  },
+  {
+    name: "Warszawa",
+    latitude: 52.2297,
+    longitude: 21.0122,
+    locationKey: "warszawa",
+  },
 ]
 
-// Weather code mapping for Open-Meteo API
 export const weatherCodeMap: Record<number, { condition: string; description: string; icon: string }> = {
-  0: { condition: "Słonecznie", description: "bezchmurne niebo", icon: "☀️" },
+  0: { condition: "Bezchmurnie", description: "czyste niebo", icon: "☀️" },
   1: { condition: "Przeważnie słonecznie", description: "głównie bezchmurnie", icon: "🌤️" },
   2: { condition: "Częściowo pochmurno", description: "częściowe zachmurzenie", icon: "⛅" },
   3: { condition: "Pochmurno", description: "zachmurzenie", icon: "☁️" },
@@ -69,163 +88,114 @@ export const weatherCodeMap: Record<number, { condition: string; description: st
   51: { condition: "Mżawka", description: "lekka mżawka", icon: "🌦️" },
   53: { condition: "Mżawka", description: "umiarkowana mżawka", icon: "🌦️" },
   55: { condition: "Mżawka", description: "gęsta mżawka", icon: "🌦️" },
+  56: { condition: "Marznąca mżawka", description: "lekka marznąca mżawka", icon: "🌨️" },
+  57: { condition: "Marznąca mżawka", description: "gęsta marznąca mżawka", icon: "🌨️" },
   61: { condition: "Deszcz", description: "lekki deszcz", icon: "🌧️" },
   63: { condition: "Deszcz", description: "umiarkowany deszcz", icon: "🌧️" },
   65: { condition: "Deszcz", description: "silny deszcz", icon: "🌧️" },
+  66: { condition: "Marznący deszcz", description: "lekki marznący deszcz", icon: "🌨️" },
+  67: { condition: "Marznący deszcz", description: "silny marznący deszcz", icon: "🌨️" },
   71: { condition: "Śnieg", description: "lekki śnieg", icon: "❄️" },
   73: { condition: "Śnieg", description: "umiarkowany śnieg", icon: "❄️" },
   75: { condition: "Śnieg", description: "silny śnieg", icon: "❄️" },
-  80: { condition: "Przelotne opady", description: "przelotne opady deszczu", icon: "🌦️" },
+  77: { condition: "Ziarna śniegu", description: "ziarna śniegu", icon: "❄️" },
+  80: { condition: "Przelotne opady", description: "lekkie przelotne opady", icon: "🌦️" },
   81: { condition: "Przelotne opady", description: "umiarkowane przelotne opady", icon: "🌦️" },
   82: { condition: "Przelotne opady", description: "silne przelotne opady", icon: "🌦️" },
-  85: { condition: "Przelotny śnieg", description: "lekki przelotny śnieg", icon: "🌨️" },
-  86: { condition: "Przelotny śnieg", description: "silny przelotny śnieg", icon: "🌨️" },
-  95: { condition: "Burza", description: "burza z piorunami", icon: "⛈️" },
+  85: { condition: "Opady śniegu", description: "lekkie opady śniegu", icon: "🌨️" },
+  86: { condition: "Opady śniegu", description: "silne opady śniegu", icon: "🌨️" },
+  95: { condition: "Burza", description: "burza", icon: "⛈️" },
   96: { condition: "Burza z gradem", description: "burza z lekkim gradem", icon: "⛈️" },
   99: { condition: "Burza z gradem", description: "burza z silnym gradem", icon: "⛈️" },
 }
 
-// Wind direction mapping
-export const windDirectionMap: Record<number, string> = {
-  0: "N",
-  45: "NE",
-  90: "E",
-  135: "SE",
-  180: "S",
-  225: "SW",
-  270: "W",
-  315: "NW",
-}
-
-export function getWindDirection(degrees: number): string {
-  const directions = [
-    "N",
-    "NNE",
-    "NE",
-    "ENE",
-    "E",
-    "ESE",
-    "SE",
-    "SSE",
-    "S",
-    "SSW",
-    "SW",
-    "WSW",
-    "W",
-    "WNW",
-    "NW",
-    "NNW",
-  ]
-  const index = Math.round(degrees / 22.5) % 16
-  return directions[index]
-}
-
-// Fallback static data for offline mode
 export const staticWeatherData: Record<string, WeatherData> = {
   konopnica: {
     location: "Konopnica",
     temperature: 18,
     humidity: 65,
     windSpeed: 12,
-    condition: "Słonecznie",
-    description: "bezchmurne niebo",
-    icon: "☀️",
-    timestamp: Date.now(),
-    sunrise: "06:30",
-    sunset: "19:45",
-    pressure: 1013,
-    visibility: 10000,
-    uvIndex: 5,
-    feelsLike: 20,
-    dewPoint: 12,
-  },
-  warszawa: {
-    location: "Warszawa",
-    temperature: 20,
-    humidity: 58,
-    windSpeed: 8,
     condition: "Częściowo pochmurno",
     description: "częściowe zachmurzenie",
     icon: "⛅",
     timestamp: Date.now(),
-    sunrise: "06:25",
-    sunset: "19:50",
-    pressure: 1015,
-    visibility: 8000,
+    sunrise: "06:30",
+    sunset: "19:45",
+    pressure: 1013,
+    visibility: 10,
     uvIndex: 4,
-    feelsLike: 22,
-    dewPoint: 10,
+    feelsLike: 19,
+    dewPoint: 12,
+    minTemp: 14,
+    maxTemp: 22,
+    hourlyForecast: [],
+    dailyForecast: [],
   },
   wielun: {
     location: "Wieluń",
-    temperature: 16,
-    humidity: 72,
-    windSpeed: 15,
-    condition: "Pochmurno",
-    description: "zachmurzenie",
-    icon: "☁️",
+    temperature: 20,
+    humidity: 60,
+    windSpeed: 8,
+    condition: "Słonecznie",
+    description: "czyste niebo",
+    icon: "☀️",
     timestamp: Date.now(),
-    sunrise: "06:35",
-    sunset: "19:40",
+    sunrise: "06:28",
+    sunset: "19:47",
+    pressure: 1015,
+    visibility: 15,
+    uvIndex: 6,
+    feelsLike: 21,
+    dewPoint: 10,
+    minTemp: 16,
+    maxTemp: 24,
+    hourlyForecast: [],
+    dailyForecast: [],
+  },
+  warszawa: {
+    location: "Warszawa",
+    temperature: 16,
+    humidity: 70,
+    windSpeed: 15,
+    condition: "Deszcz",
+    description: "lekki deszcz",
+    icon: "🌧️",
+    timestamp: Date.now(),
+    sunrise: "06:25",
+    sunset: "19:50",
     pressure: 1010,
-    visibility: 6000,
+    visibility: 8,
     uvIndex: 2,
-    feelsLike: 14,
+    feelsLike: 15,
     dewPoint: 11,
+    minTemp: 12,
+    maxTemp: 18,
+    hourlyForecast: [],
+    dailyForecast: [],
   },
 }
 
-// API rate limiting - fixed for SSR compatibility
 export class APIRateLimit {
-  private calls = 0
-  private lastReset: number = Date.now()
-  private readonly maxCalls: number = 9000 // Leave some buffer under 10000
-  private readonly resetInterval: number = 24 * 60 * 60 * 1000 // 24 hours
-  private initialized = false
-
-  private initializeFromStorage(): void {
-    if (this.initialized || typeof window === "undefined") return
-
-    try {
-      const savedCalls = localStorage.getItem("api_calls")
-      const savedReset = localStorage.getItem("api_last_reset")
-      if (savedCalls) this.calls = Number.parseInt(savedCalls)
-      if (savedReset) this.lastReset = Number.parseInt(savedReset)
-      this.initialized = true
-    } catch (error) {
-      console.warn("Failed to initialize from localStorage:", error)
-    }
-  }
+  private calls: number[] = []
+  private readonly maxCalls = 10000
+  private readonly timeWindow = 24 * 60 * 60 * 1000 // 24 hours
 
   canMakeCall(): boolean {
-    this.initializeFromStorage()
-    this.checkReset()
-    return this.calls < this.maxCalls
+    this.cleanOldCalls()
+    return this.calls.length < this.maxCalls
   }
 
   recordCall(): void {
-    this.calls++
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("api_calls", this.calls.toString())
-        localStorage.setItem("api_last_reset", this.lastReset.toString())
-      } catch (error) {
-        console.warn("Failed to save to localStorage:", error)
-      }
-    }
+    this.calls.push(Date.now())
   }
 
-  private checkReset(): void {
+  private cleanOldCalls(): void {
     const now = Date.now()
-    if (now - this.lastReset > this.resetInterval) {
-      this.calls = 0
-      this.lastReset = now
-    }
+    this.calls = this.calls.filter((callTime) => now - callTime < this.timeWindow)
   }
 
   getRemainingCalls(): number {
-    this.initializeFromStorage()
-    this.checkReset()
-    return Math.max(0, this.maxCalls - this.calls)
+    this.cleanOldCalls()
+    return Math.max(0, this.maxCalls - this.calls.length)
   }
 }

@@ -119,266 +119,272 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell",
-      "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    overflow: hidden;
-    font-size: 16px;
-    line-height: 1.5;
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-/* Mobile-first responsive design */
+/* Mobile optimizations */
 .mobile-container {
-  width: 100vw;
   height: 100vh;
-  height: 100dvh;
-  position: fixed;
-  top: 0;
-  left: 0;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   overflow: hidden;
-  position: relative;
   touch-action: manipulation;
-}
-
-/* Weather card optimizations */
-.weather-card {
-  min-height: 400px;
-  max-width: 90vw;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-  transition: transform 0.3s ease;
-}
-
-/* Control buttons - minimum 48x48px touch targets */
-.control-button {
-  min-height: 80px;
-  min-width: 120px;
-  font-size: 16px;
-  line-height: 1.4;
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
+  -webkit-overflow-scrolling: touch;
   -webkit-tap-highlight-color: transparent;
-  transition: all 0.15s ease;
-  transform-origin: center;
 }
 
+/* Weather card specific styles */
+.weather-card {
+  /* Force light mode for weather card regardless of system theme */
+  color-scheme: light !important;
+  background-color: white !important;
+  color: #374151 !important;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  /* Even wider card for less scrolling */
+  max-width: 42rem !important; /* 672px instead of 512px */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.weather-card * {
+  color-scheme: light !important;
+}
+
+/* Prevent dark mode from affecting the weather card */
+@media (prefers-color-scheme: dark) {
+  .weather-card {
+    background-color: white !important;
+    color: #374151 !important;
+  }
+
+  .weather-card * {
+    color: inherit !important;
+  }
+
+  .weather-card .text-gray-600 {
+    color: #6b7280 !important;
+  }
+
+  .weather-card .text-gray-700 {
+    color: #374151 !important;
+  }
+
+  .weather-card .text-gray-800 {
+    color: #1f2937 !important;
+  }
+}
+
+.weather-card::-webkit-scrollbar {
+  width: 4px;
+}
+
+.weather-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.weather-card::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 2px;
+}
+
+.weather-card::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* Control grid */
 .control-grid {
-  gap: 12px;
-  padding: 8px;
-  max-height: calc(100vh - 32px);
   height: calc(100vh - 2rem);
   height: calc(100dvh - 2rem);
+  max-height: calc(100vh - 2rem);
 }
 
-/* Button animations - reduced for performance */
+/* Button animations */
+.control-button {
+  transition: all 0.15s ease-in-out;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.control-button:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.control-button {
+  min-height: 80px;
+  touch-action: manipulation;
+}
+
+/* Improved touch targets */
+@media (hover: none) and (pointer: coarse) {
+  .hover\:scale-105:hover {
+    transform: none;
+  }
+
+  .active\:scale-95:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Prevent zoom on inputs */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+/* Improve visibility of indicators */
+.indicator {
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+
+.indicator.active {
+  transform: scale(1.2);
+}
+
+/* Enhanced gradient transitions */
+.bg-gradient-to-br {
+  transition: background 1s ease-in-out;
+}
+
+/* Better button hover states for touch devices */
+@media (hover: hover) {
+  .control-button:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .weather-card {
+    border: 2px solid #000;
+  }
+
+  .control-button {
+    border: 2px solid #fff;
+  }
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+.control-button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Pulse animation */
 @keyframes pulse {
   0%,
   100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.7;
+    opacity: 0.5;
   }
 }
 
-.animate-button {
-  animation: pulse 1s ease-in-out;
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.animate-button:hover {
-  animation: none;
-  transform: scale(1.02);
+/* Custom scrollbar for weather card */
+.weather-card::-webkit-scrollbar {
+  width: 4px;
 }
 
-.animate-button:active {
-  animation: none;
-  transform: scale(0.95);
+.weather-card::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Mobile landscape optimization */
-@media screen and (max-width: 768px) and (orientation: landscape) {
-  .mobile-container {
-    transform-origin: left top;
-    width: 100vh;
-    height: 100vw;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    transform: rotate(-90deg);
-  }
+.weather-card::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 2px;
+}
 
+.weather-card::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
+}
+
+/* Horizontal scrollbar for hourly forecast */
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 2px;
+}
+
+/* Improved spacing for mobile */
+@media (max-width: 640px) {
   .weather-card {
-    max-width: 400px;
-  }
-
-  .control-grid {
-    max-width: 600px;
-    margin: 0 auto;
+    margin: 0 0.5rem;
+    max-width: calc(100vw - 1rem) !important;
   }
 }
 
-/* Small screens (360px and below) */
-@media screen and (max-width: 360px) {
-  .weather-card {
-    max-width: 95vw;
-    margin: 0 8px;
-  }
-
-  .control-button {
-    min-height: 70px;
-    min-width: 100px;
-    font-size: 14px;
-  }
-
-  .control-grid {
-    gap: 8px;
-    padding: 4px;
-  }
+/* 3-column grid optimizations */
+.grid-cols-3 > div {
+  min-width: 0; /* Prevent overflow */
 }
 
-/* Very small screens (320px and below) */
-@media screen and (max-width: 320px) {
-  .control-button {
-    min-height: 60px;
-    min-width: 90px;
-    font-size: 13px;
-  }
-
-  .weather-card {
-    padding: 12px;
-  }
+/* Better spacing for 3-column items */
+.grid-cols-3 > div {
+  padding: 0.75rem 0.5rem;
 }
 
-/* Medium screens (tablets) */
-@media screen and (min-width: 769px) and (max-width: 1024px) {
-  .weather-card {
-    max-width: 500px;
+/* Responsive adjustments for very small screens */
+@media (max-width: 360px) {
+  .grid-cols-3 {
+    gap: 0.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .control-button {
-    min-height: 100px;
-    min-width: 150px;
-    font-size: 18px;
-  }
-}
-
-/* Large screens (desktop) */
-@media screen and (min-width: 1025px) {
-  .mobile-container {
-    max-width: 800px;
-    margin: 0 auto;
-    position: relative;
-    height: 100vh;
+  .grid-cols-3 > div {
+    padding: 0.5rem 0.25rem;
   }
 
-  .weather-card {
-    max-width: 600px;
+  .grid-cols-3 > :nth-child(3n) {
+    grid-column: span 2;
   }
-
-  .control-button {
-    min-height: 120px;
-    min-width: 180px;
-    font-size: 20px;
-  }
-}
-
-/* Touch optimization */
-@media (hover: none) and (pointer: coarse) {
-  .control-button:hover {
-    transform: none;
-  }
-
-  .control-button:active {
-    transform: scale(0.95);
-    transition: transform 0.1s ease;
-  }
-}
-
-/* High DPI screens */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  .weather-card {
-    backdrop-filter: blur(10px);
-  }
-}
-
-/* Prevent zoom on input focus */
-input,
-select,
-textarea {
-  font-size: 16px !important;
-}
-
-/* Improve touch targets */
-button,
-a,
-[role="button"] {
-  min-height: 48px;
-  min-width: 48px;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-/* Better visibility around notches and bezels */
-@supports (padding: env(safe-area-inset-top)) {
-  .mobile-container {
-    padding-top: env(safe-area-inset-top);
-    padding-right: env(safe-area-inset-right);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-  }
-}
-
-/* Reduce motion for users who prefer it */
-@media (prefers-reduced-motion: reduce) {
-  .animate-button,
-  .weather-card,
-  .haptic-feedback {
-    animation: none;
-    transition: none;
-  }
-
-  * {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
-}
-
-/* PWA specific styles */
-@media (display-mode: standalone) {
-  body {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .control-button {
-    border: 2px solid currentColor;
-  }
-}
-
-/* Font loading optimization */
-.font-inter {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell",
-    "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
-  font-display: swap;
 }

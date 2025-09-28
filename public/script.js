@@ -35,6 +35,20 @@ class WeatherApp {
       99: { condition: "Burza z gradem", description: "burza z silnym gradem", icon: "⛈️" },
     }
 
+    // Test gradients array
+    this.testGradients = [
+      "linear-gradient(135deg, #3b82f6, #1d4ed8, #1e40af)", // Default blue
+      "linear-gradient(135deg, #fbbf24, #f59e0b, #ea580c)", // Sunny
+      "linear-gradient(135deg, #475569, #374151, #475569)", // Rainy
+      "linear-gradient(135deg, #e2e8f0, #f1f5f9, #e2e8f0)", // Snowy
+      "linear-gradient(135deg, #64748b, #3b82f6, #6b7280)", // Cloudy
+      "linear-gradient(135deg, #1e293b, #7c3aed, #374151)", // Thunderstorm
+      "linear-gradient(135deg, #111827, #0f172a, #000000)", // Night
+      "linear-gradient(135deg, #ec4899, #f43f5e, #dc2626)", // Test pink
+      "linear-gradient(135deg, #10b981, #059669, #0d9488)", // Test green
+      "linear-gradient(135deg, #8b5cf6, #7c3aed, #6366f1)", // Test purple
+    ]
+
     // App state
     this.currentView = "weather" // 'weather' or 'control'
     this.currentLocationIndex = 0
@@ -43,6 +57,7 @@ class WeatherApp {
     this.lastApiReset = Number.parseInt(localStorage.getItem("api_last_reset") || Date.now().toString())
     this.maxApiCalls = 9000 // Stay under 10000 limit
     this.isOnline = navigator.onLine
+    this.gradientIndex = 0
 
     // Touch handling
     this.touchStart = null
@@ -96,6 +111,7 @@ class WeatherApp {
       connectionStatus: document.getElementById("connection-status"),
       statusText: document.getElementById("status-text"),
       currentTimeDisplay: document.getElementById("current-time"),
+      gradientTestButton: document.getElementById("gradient-test-button"),
       indicators: document.querySelectorAll(".indicator"),
       controlButtons: document.querySelectorAll(".control-button"),
     }
@@ -111,6 +127,11 @@ class WeatherApp {
     this.elements.controlButtons.forEach((button) => {
       button.addEventListener("click", this.handleControlClick.bind(this))
     })
+
+    // Gradient test button
+    if (this.elements.gradientTestButton) {
+      this.elements.gradientTestButton.addEventListener("click", this.cycleGradient.bind(this))
+    }
 
     // Retry button
     if (this.elements.retryWeather) {
@@ -200,13 +221,32 @@ class WeatherApp {
 
     this.triggerHaptic([100, 50, 100])
 
+    // Check if it's the gradient test button
+    if (buttonId === "6") {
+      this.cycleGradient()
+      console.log(`Gradient changed to: ${this.testGradients[this.gradientIndex]}`)
+    } else {
+      console.log(`Control button ${buttonId} pressed`)
+    }
+
     // Visual feedback
     button.style.transform = "scale(0.95)"
     setTimeout(() => {
       button.style.transform = ""
     }, 150)
+  }
 
-    console.log(`Control button ${buttonId} pressed`)
+  cycleGradient() {
+    this.gradientIndex = (this.gradientIndex + 1) % this.testGradients.length
+    const newGradient = this.testGradients[this.gradientIndex]
+
+    // Apply gradient to weather view background
+    if (this.elements.weatherView) {
+      this.elements.weatherView.style.background = newGradient
+    }
+
+    this.triggerHaptic([100, 50, 100])
+    console.log(`Gradient ${this.gradientIndex + 1}: ${newGradient}`)
   }
 
   triggerHaptic(pattern = 50) {
@@ -630,12 +670,6 @@ class WeatherApp {
     }
   }
 
-  hideApiError() {
-    if (this.elements.apiError) {
-      this.elements.apiError.classList.add("hidden")
-    }
-  }
-
   cacheWeatherData(locationKey, data) {
     const cacheKey = `weather_${locationKey}`
     const cacheData = {
@@ -665,7 +699,6 @@ class WeatherApp {
   }
 
   getFallbackData(location) {
-    // Enhanced static fallback data
     const fallbackData = {
       konopnica: {
         location: "Konopnica",
@@ -855,136 +888,136 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     })
   }
+})
 
-  // PWA install prompt
-  let deferredPrompt
-  const installButton = document.getElementById("install-button")
+// PWA install prompt
+let deferredPrompt
+const installButton = document.getElementById("install-button")
 
-  window.addEventListener("beforeinstallprompt", (e) => {
-    console.log("PWA install prompt triggered")
-    e.preventDefault()
-    deferredPrompt = e
-
-    if (installButton) {
-      installButton.style.display = "block"
-    }
-  })
+window.addEventListener("beforeinstallprompt", (e) => {
+  console.log("PWA install prompt triggered")
+  e.preventDefault()
+  deferredPrompt = e
 
   if (installButton) {
-    installButton.addEventListener("click", () => {
-      if (deferredPrompt) {
-        deferredPrompt.prompt()
-        deferredPrompt.userChoice.then((choiceResult) => {
-          console.log(`PWA install outcome: ${choiceResult.outcome}`)
-          deferredPrompt = null
-          installButton.style.display = "none"
-        })
-      }
-    })
+    installButton.style.display = "block"
   }
+})
 
-  // Handle app installed
-  window.addEventListener("appinstalled", () => {
-    console.log("PWA was installed")
-    if (installButton) {
-      installButton.style.display = "none"
-    }
-  })
-
-  // Background sync for weather data
-  function requestBackgroundSync() {
-    if ("serviceWorker" in navigator && "sync" in window.ServiceWorkerRegistration.prototype) {
-      navigator.serviceWorker.ready
-        .then((registration) => {
-          return registration.sync.register("weather-sync")
-        })
-        .catch((error) => {
-          console.error("Background sync registration failed:", error)
-        })
-    }
-  }
-
-  // Request sync every 30 minutes
-  setInterval(requestBackgroundSync, 30 * 60 * 1000)
-
-  // Push notifications setup
-  async function setupPushNotifications() {
-    if ("Notification" in window && "serviceWorker" in navigator) {
-      const permission = await Notification.requestPermission()
-
-      if (permission === "granted") {
-        console.log("Notification permission granted")
-
-        // Subscribe to push notifications
-        navigator.serviceWorker.ready
-          .then((registration) => {
-            return registration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: null, // Add your VAPID key here
-            })
-          })
-          .then((subscription) => {
-            console.log("Push subscription:", subscription)
-            // Send subscription to server
-          })
-          .catch((error) => {
-            console.error("Push subscription failed:", error)
-          })
-      }
-    }
-  }
-
-  // Initialize push notifications after user interaction
-  document.addEventListener("click", setupPushNotifications, { once: true })
-
-  // Performance monitoring
-  function logPerformance() {
-    if ("performance" in window) {
-      window.addEventListener("load", () => {
-        setTimeout(() => {
-          const perfData = performance.getEntriesByType("navigation")[0]
-          console.log("Performance metrics:", {
-            loadTime: perfData.loadEventEnd - perfData.loadEventStart,
-            domContentLoaded: perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart,
-            firstPaint: performance.getEntriesByType("paint").find((entry) => entry.name === "first-paint")?.startTime,
-            firstContentfulPaint: performance
-              .getEntriesByType("paint")
-              .find((entry) => entry.name === "first-contentful-paint")?.startTime,
-          })
-        }, 0)
+if (installButton) {
+  installButton.addEventListener("click", () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt()
+      deferredPrompt.userChoice.then((choiceResult) => {
+        console.log(`PWA install outcome: ${choiceResult.outcome}`)
+        deferredPrompt = null
+        installButton.style.display = "none"
       })
     }
+  })
+}
+
+// Handle app installed
+window.addEventListener("appinstalled", () => {
+  console.log("PWA was installed")
+  if (installButton) {
+    installButton.style.display = "none"
   }
-
-  logPerformance()
-
-  // Viewport height fix for mobile
-  function setViewportHeight() {
-    const vh = window.innerHeight * 0.01
-    document.documentElement.style.setProperty("--vh", `${vh}px`)
-  }
-
-  window.addEventListener("resize", setViewportHeight)
-  setViewportHeight()
-
-  // Touch event optimization
-  document.addEventListener("touchstart", () => {}, { passive: true })
-  document.addEventListener("touchmove", () => {}, { passive: true })
-
-  // Prevent zoom on double tap
-  let lastTouchEnd = 0
-  document.addEventListener(
-    "touchend",
-    (event) => {
-      const now = new Date().getTime()
-      if (now - lastTouchEnd <= 300) {
-        event.preventDefault()
-      }
-      lastTouchEnd = now
-    },
-    false,
-  )
 })
+
+// Background sync for weather data
+function requestBackgroundSync() {
+  if ("serviceWorker" in navigator && "sync" in window.ServiceWorkerRegistration.prototype) {
+    navigator.serviceWorker.ready
+      .then((registration) => {
+        return registration.sync.register("weather-sync")
+      })
+      .catch((error) => {
+        console.error("Background sync registration failed:", error)
+      })
+  }
+}
+
+// Request sync every 30 minutes
+setInterval(requestBackgroundSync, 30 * 60 * 1000)
+
+// Push notifications setup
+async function setupPushNotifications() {
+  if ("Notification" in window && "serviceWorker" in navigator) {
+    const permission = await Notification.requestPermission()
+
+    if (permission === "granted") {
+      console.log("Notification permission granted")
+
+      // Subscribe to push notifications
+      navigator.serviceWorker.ready
+        .then((registration) => {
+          return registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: null, // Add your VAPID key here
+          })
+        })
+        .then((subscription) => {
+          console.log("Push subscription:", subscription)
+          // Send subscription to server
+        })
+        .catch((error) => {
+          console.error("Push subscription failed:", error)
+        })
+    }
+  }
+}
+
+// Initialize push notifications after user interaction
+document.addEventListener("click", setupPushNotifications, { once: true })
+
+// Performance monitoring
+function logPerformance() {
+  if ("performance" in window) {
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        const perfData = performance.getEntriesByType("navigation")[0]
+        console.log("Performance metrics:", {
+          loadTime: perfData.loadEventEnd - perfData.loadEventStart,
+          domContentLoaded: perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart,
+          firstPaint: performance.getEntriesByType("paint").find((entry) => entry.name === "first-paint")?.startTime,
+          firstContentfulPaint: performance
+            .getEntriesByType("paint")
+            .find((entry) => entry.name === "first-contentful-paint")?.startTime,
+        })
+      }, 0)
+    })
+  }
+}
+
+logPerformance()
+
+// Viewport height fix for mobile
+function setViewportHeight() {
+  const vh = window.innerHeight * 0.01
+  document.documentElement.style.setProperty("--vh", `${vh}px`)
+}
+
+window.addEventListener("resize", setViewportHeight)
+setViewportHeight()
+
+// Touch event optimization
+document.addEventListener("touchstart", () => {}, { passive: true })
+document.addEventListener("touchmove", () => {}, { passive: true })
+
+// Prevent zoom on double tap
+let lastTouchEnd = 0
+document.addEventListener(
+  "touchend",
+  (event) => {
+    const now = new Date().getTime()
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault()
+    }
+    lastTouchEnd = now
+  },
+  false,
+)
 
 // Global error handling
 window.addEventListener("error", (event) => {
