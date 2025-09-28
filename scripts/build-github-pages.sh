@@ -1,85 +1,77 @@
 #!/bin/bash
 
 # Build script for GitHub Pages deployment
-echo "🚀 Building GitHub Pages version..."
+echo "🚀 Building for GitHub Pages..."
 
-# Create docs directory for GitHub Pages
+# Create docs directory (GitHub Pages source)
+rm -rf docs
 mkdir -p docs
 
-# Copy public files to docs
+# Build Next.js app
+echo "📦 Building Next.js application..."
+npm run build
+
+# Copy built files to docs directory
 echo "📁 Copying files to docs directory..."
-cp -r public/* docs/
+cp -r out/* docs/
+
+# Copy public files (they should already be in out, but just in case)
+cp -r public/* docs/ 2>/dev/null || true
 
 # Create .nojekyll file to bypass Jekyll processing
 touch docs/.nojekyll
 
 # Create CNAME file if domain is specified
-if [ ! -z "$CUSTOM_DOMAIN" ]; then
-    echo "$CUSTOM_DOMAIN" > docs/CNAME
-    echo "🌐 Added custom domain: $CUSTOM_DOMAIN"
+if [ ! -z "$GITHUB_PAGES_DOMAIN" ]; then
+    echo "$GITHUB_PAGES_DOMAIN" > docs/CNAME
+    echo "🌐 Added CNAME for domain: $GITHUB_PAGES_DOMAIN"
 fi
 
-# Optimize HTML files
-echo "🔧 Optimizing HTML files..."
-find docs -name "*.html" -type f -exec sed -i 's/  */ /g' {} \;
+# Optimize images if script exists
+if [ -f "./scripts/optimize-images.sh" ]; then
+    echo "🖼️ Optimizing images..."
+    ./scripts/optimize-images.sh docs
+fi
 
-# Create robots.txt
-cat > docs/robots.txt << EOF
-User-agent: *
-Allow: /
-
-Sitemap: https://$(basename $(pwd)).github.io/sitemap.xml
+# Create deployment info
+cat > docs/deployment-info.json << EOF
+{
+  "buildTime": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "version": "1.2.0",
+  "features": [
+    "Real Weather API (Open-Meteo)",
+    "PWA Support",
+    "Offline Functionality",
+    "Service Worker",
+    "API Rate Limiting",
+    "Touch Navigation",
+    "Haptic Feedback"
+  ],
+  "locations": [
+    "Konopnica",
+    "Warszawa", 
+    "Wieluń"
+  ],
+  "apiProvider": "Open-Meteo",
+  "maxApiCalls": 9000
+}
 EOF
 
-# Create sitemap.xml
-cat > docs/sitemap.xml << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-        <loc>https://$(basename $(pwd)).github.io/</loc>
-        <lastmod>$(date +%Y-%m-%d)</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>1.0</priority>
-    </url>
-</urlset>
-EOF
+echo "✅ Build complete!"
+echo "📊 Deployment info:"
+echo "   - Build time: $(date)"
+echo "   - Output directory: docs/"
+echo "   - Files: $(find docs -type f | wc -l)"
+echo "   - Size: $(du -sh docs | cut -f1)"
 
-# Generate icons if they don't exist
-if [ ! -f "docs/icon-192x192.png" ]; then
-    echo "🎨 Generating missing icons..."
-    # This would normally use a tool like ImageMagick
-    # For now, copy favicon as placeholder
-    cp docs/favicon.ico docs/icon-72x72.png 2>/dev/null || true
-    cp docs/favicon.ico docs/icon-96x96.png 2>/dev/null || true
-    cp docs/favicon.ico docs/icon-128x128.png 2>/dev/null || true
-    cp docs/favicon.ico docs/icon-144x144.png 2>/dev/null || true
-    cp docs/favicon.ico docs/icon-152x152.png 2>/dev/null || true
-    cp docs/favicon.ico docs/icon-192x192.png 2>/dev/null || true
-    cp docs/favicon.ico docs/icon-384x384.png 2>/dev/null || true
-    cp docs/favicon.ico docs/icon-512x512.png 2>/dev/null || true
-    cp docs/favicon.ico docs/apple-touch-icon.png 2>/dev/null || true
-    cp docs/favicon.ico docs/favicon-32x32.png 2>/dev/null || true
-    cp docs/favicon.ico docs/favicon-16x16.png 2>/dev/null || true
-fi
+echo ""
+echo "🔧 Next steps:"
+echo "1. git add docs/"
+echo "2. git commit -m 'Deploy to GitHub Pages'"
+echo "3. git push origin main"
+echo "4. Enable GitHub Pages in repository settings"
+echo "5. Set source to 'Deploy from a branch' -> 'main' -> '/docs'"
 
-# Validate files
-echo "✅ Validating build..."
-if [ -f "docs/index.html" ] && [ -f "docs/styles.css" ] && [ -f "docs/script.js" ]; then
-    echo "✅ Build successful!"
-    echo "📊 Build statistics:"
-    echo "   - HTML files: $(find docs -name "*.html" | wc -l)"
-    echo "   - CSS files: $(find docs -name "*.css" | wc -l)"
-    echo "   - JS files: $(find docs -name "*.js" | wc -l)"
-    echo "   - Image files: $(find docs -name "*.png" -o -name "*.jpg" -o -name "*.webp" -o -name "*.ico" | wc -l)"
-    echo "   - Total size: $(du -sh docs | cut -f1)"
-else
-    echo "❌ Build failed - missing required files"
-    exit 1
-fi
-
-echo "🎉 GitHub Pages build complete!"
-echo "📝 Next steps:"
-echo "   1. git add docs/"
-echo "   2. git commit -m 'Deploy GitHub Pages'"
-echo "   3. git push origin main"
-echo "   4. Enable GitHub Pages in repository settings"
+echo ""
+echo "🌐 Your app will be available at:"
+echo "   https://[username].github.io/[repository-name]/"

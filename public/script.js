@@ -1,572 +1,825 @@
-// Weather App JavaScript
+// Weather App with Enhanced Real API Integration
 class WeatherApp {
   constructor() {
-    this.weatherData = [
-      {
-        id: 1,
-        location: "Wieluń",
-        temperature: 18,
-        description: "częściowo pochmurno",
-        icon: "⛅",
-        humidity: 65,
-        windSpeed: 12,
-        pressure: 1013,
-        visibility: 10,
-      },
-      {
-        id: 2,
-        location: "Częstochowa",
-        temperature: 20,
-        description: "słonecznie",
-        icon: "☀️",
-        humidity: 45,
-        windSpeed: 8,
-        pressure: 1015,
-        visibility: 15,
-      },
-      {
-        id: 3,
-        location: "Kalisz",
-        temperature: 16,
-        description: "deszczowo",
-        icon: "🌧️",
-        humidity: 85,
-        windSpeed: 15,
-        pressure: 1008,
-        visibility: 8,
-      },
-      {
-        id: 4,
-        location: "Łódź",
-        temperature: 19,
-        description: "pochmurno",
-        icon: "☁️",
-        humidity: 70,
-        windSpeed: 10,
-        pressure: 1011,
-        visibility: 12,
-      },
-      {
-        id: 5,
-        location: "Sieradz",
-        temperature: 17,
-        description: "mgliście",
-        icon: "🌫️",
-        humidity: 90,
-        windSpeed: 5,
-        pressure: 1009,
-        visibility: 5,
-      },
+    // Location data matching the API coordinates
+    this.locations = [
+      { name: "Konopnica", key: "konopnica", lat: 51.221, lon: 18.5696 },
+      { name: "Warszawa", key: "warszawa", lat: 52.2298, lon: 21.0118 },
+      { name: "Wieluń", key: "wielun", lat: 51.3538, lon: 18.8236 },
     ]
 
-    this.controlStates = {
-      lighting: false,
-      temperature: 22,
-      security: true,
-      ventilation: "auto",
-      energy: 85,
-      water: "ok",
+    // Weather code mapping for Open-Meteo API
+    this.weatherCodes = {
+      0: { condition: "Słonecznie", description: "bezchmurne niebo", icon: "☀️" },
+      1: { condition: "Przeważnie słonecznie", description: "głównie bezchmurnie", icon: "🌤️" },
+      2: { condition: "Częściowo pochmurno", description: "częściowe zachmurzenie", icon: "⛅" },
+      3: { condition: "Pochmurno", description: "zachmurzenie", icon: "☁️" },
+      45: { condition: "Mgła", description: "mgła", icon: "🌫️" },
+      48: { condition: "Szron", description: "osadzający się szron", icon: "🌫️" },
+      51: { condition: "Mżawka", description: "lekka mżawka", icon: "🌦️" },
+      53: { condition: "Mżawka", description: "umiarkowana mżawka", icon: "🌦️" },
+      55: { condition: "Mżawka", description: "gęsta mżawka", icon: "🌦️" },
+      61: { condition: "Deszcz", description: "lekki deszcz", icon: "🌧️" },
+      63: { condition: "Deszcz", description: "umiarkowany deszcz", icon: "🌧️" },
+      65: { condition: "Deszcz", description: "silny deszcz", icon: "🌧️" },
+      71: { condition: "Śnieg", description: "lekki śnieg", icon: "❄️" },
+      73: { condition: "Śnieg", description: "umiarkowany śnieg", icon: "❄️" },
+      75: { condition: "Śnieg", description: "silny śnieg", icon: "❄️" },
+      80: { condition: "Przelotne opady", description: "przelotne opady deszczu", icon: "🌦️" },
+      81: { condition: "Przelotne opady", description: "umiarkowane przelotne opady", icon: "🌦️" },
+      82: { condition: "Przelotne opady", description: "silne przelotne opady", icon: "🌦️" },
+      85: { condition: "Przelotny śnieg", description: "lekki przelotny śnieg", icon: "🌨️" },
+      86: { condition: "Przelotny śnieg", description: "silny przelotny śnieg", icon: "🌨️" },
+      95: { condition: "Burza", description: "burza z piorunami", icon: "⛈️" },
+      96: { condition: "Burza z gradem", description: "burza z lekkim gradem", icon: "⛈️" },
+      99: { condition: "Burza z gradem", description: "burza z silnym gradem", icon: "⛈️" },
     }
 
-    this.lastUpdate = null
-    this.updateInterval = null
-    this.deferredPrompt = null
+    // App state
+    this.currentView = "weather" // 'weather' or 'control'
+    this.currentLocationIndex = 0
+    this.isLoading = true
+    this.apiCalls = Number.parseInt(localStorage.getItem("api_calls") || "0")
+    this.lastApiReset = Number.parseInt(localStorage.getItem("api_last_reset") || Date.now().toString())
+    this.maxApiCalls = 9000 // Stay under 10000 limit
+    this.isOnline = navigator.onLine
+
+    // Touch handling
+    this.touchStart = null
+    this.touchEnd = null
+    this.minSwipeDistance = 50
+
+    // Elements
+    this.elements = {}
 
     this.init()
   }
 
   init() {
+    this.cacheElements()
     this.setupEventListeners()
-    this.renderWeather()
-    this.updateControlStates()
-    this.startAutoUpdate()
+    this.checkApiRateLimit()
+    this.showWeatherView()
+    this.fetchWeatherData()
+    this.setupAutoRefresh()
     this.hideLoadingScreen()
-    this.setupPWA()
-    this.setupHapticFeedback()
+  }
+
+  cacheElements() {
+    this.elements = {
+      loadingScreen: document.getElementById("loading-screen"),
+      weatherView: document.getElementById("weather-view"),
+      controlView: document.getElementById("control-view"),
+      weatherLoading: document.getElementById("weather-loading"),
+      weatherData: document.getElementById("weather-data"),
+      weatherError: document.getElementById("weather-error"),
+      locationName: document.getElementById("location-name"),
+      weatherIcon: document.getElementById("weather-icon"),
+      temperature: document.getElementById("temperature"),
+      condition: document.getElementById("condition"),
+      description: document.getElementById("description"),
+      humidity: document.getElementById("humidity"),
+      windSpeed: document.getElementById("wind-speed"),
+      sunrise: document.getElementById("sunrise"),
+      sunset: document.getElementById("sunset"),
+      pressure: document.getElementById("pressure"),
+      visibility: document.getElementById("visibility"),
+      uvIndex: document.getElementById("uv-index"),
+      feelsLike: document.getElementById("feels-like"),
+      dewPoint: document.getElementById("dew-point"),
+      hourlyList: document.getElementById("hourly-list"),
+      dailyList: document.getElementById("daily-list"),
+      lastUpdate: document.getElementById("last-update"),
+      apiError: document.getElementById("api-error"),
+      retryWeather: document.getElementById("retry-weather"),
+      connectionStatus: document.getElementById("connection-status"),
+      statusText: document.getElementById("status-text"),
+      apiCallsDisplay: document.getElementById("api-calls"),
+      indicators: document.querySelectorAll(".indicator"),
+      controlButtons: document.querySelectorAll(".control-button"),
+    }
   }
 
   setupEventListeners() {
-    // Refresh weather button
-    const refreshBtn = document.getElementById("refresh-weather")
-    if (refreshBtn) {
-      refreshBtn.addEventListener("click", () => this.refreshWeather())
-    }
+    // Touch events for swiping
+    document.addEventListener("touchstart", this.handleTouchStart.bind(this), { passive: true })
+    document.addEventListener("touchmove", this.handleTouchMove.bind(this), { passive: true })
+    document.addEventListener("touchend", this.handleTouchEnd.bind(this), { passive: true })
 
     // Control buttons
-    const controlButtons = document.querySelectorAll(".control-btn")
-    controlButtons.forEach((btn) => {
-      btn.addEventListener("click", (e) => this.handleControlAction(e))
+    this.elements.controlButtons.forEach((button) => {
+      button.addEventListener("click", this.handleControlClick.bind(this))
     })
 
-    // Install button
-    const installBtn = document.getElementById("install-btn")
-    if (installBtn) {
-      installBtn.addEventListener("click", () => this.installApp())
+    // Retry button
+    if (this.elements.retryWeather) {
+      this.elements.retryWeather.addEventListener("click", () => {
+        this.fetchWeatherData()
+      })
     }
 
-    // PWA install prompt
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault()
-      this.deferredPrompt = e
-      this.showInstallButton()
+    // Online/offline detection
+    window.addEventListener("online", () => {
+      this.isOnline = true
+      this.updateConnectionStatus()
+      this.fetchWeatherData()
     })
 
-    // Handle app installed
-    window.addEventListener("appinstalled", () => {
-      this.hideInstallButton()
-      this.showToast("Aplikacja została zainstalowana!", "success")
+    window.addEventListener("offline", () => {
+      this.isOnline = false
+      this.updateConnectionStatus()
     })
 
-    // Handle online/offline status
-    window.addEventListener("online", () => this.updateConnectionStatus(true))
-    window.addEventListener("offline", () => this.updateConnectionStatus(false))
-
-    // Handle visibility change for auto-refresh
+    // Visibility change for auto-refresh
     document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) {
-        this.refreshWeather()
+      if (!document.hidden && this.canMakeApiCall()) {
+        this.fetchWeatherData()
       }
     })
   }
 
-  hideLoadingScreen() {
-    setTimeout(() => {
-      const loadingScreen = document.getElementById("loading-screen")
-      const app = document.getElementById("app")
+  handleTouchStart(e) {
+    this.touchStart = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    }
+    this.touchEnd = null
+  }
 
-      if (loadingScreen && app) {
-        loadingScreen.style.opacity = "0"
-        setTimeout(() => {
-          loadingScreen.style.display = "none"
-          app.style.display = "flex"
-          app.style.opacity = "0"
-          setTimeout(() => {
-            app.style.opacity = "1"
-            app.style.transition = "opacity 0.3s ease"
-          }, 50)
-        }, 300)
+  handleTouchMove(e) {
+    this.touchEnd = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    }
+  }
+
+  handleTouchEnd() {
+    if (!this.touchStart || !this.touchEnd) return
+
+    const distanceX = this.touchStart.x - this.touchEnd.x
+    const distanceY = this.touchStart.y - this.touchEnd.y
+    const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY)
+
+    if (isHorizontalSwipe) {
+      const isLeftSwipe = distanceX > this.minSwipeDistance
+      const isRightSwipe = distanceX < -this.minSwipeDistance
+
+      if (isLeftSwipe && this.currentView === "weather") {
+        this.triggerHaptic([50, 30, 50])
+        this.showControlView()
       }
-    }, 1500)
-  }
+      if (isRightSwipe && this.currentView === "control") {
+        this.triggerHaptic([50, 30, 50])
+        this.showWeatherView()
+      }
+    } else {
+      if (this.currentView === "weather") {
+        const isUpSwipe = distanceY > this.minSwipeDistance
+        const isDownSwipe = distanceY < -this.minSwipeDistance
 
-  renderWeather() {
-    const weatherGrid = document.getElementById("weather-grid")
-    if (!weatherGrid) return
-
-    weatherGrid.innerHTML = ""
-
-    this.weatherData.forEach((weather) => {
-      const weatherCard = this.createWeatherCard(weather)
-      weatherGrid.appendChild(weatherCard)
-    })
-
-    this.updateLastUpdateTime()
-  }
-
-  createWeatherCard(weather) {
-    const card = document.createElement("div")
-    card.className = "weather-card"
-    card.innerHTML = `
-            <div class="weather-header">
-                <div class="weather-location">${weather.location}</div>
-                <div class="weather-icon">${weather.icon}</div>
-            </div>
-            <div class="weather-temp">${weather.temperature}°C</div>
-            <div class="weather-description">${weather.description}</div>
-            <div class="weather-details">
-                <div class="weather-detail">
-                    <span class="weather-detail-label">Wilgotność</span>
-                    <span class="weather-detail-value">${weather.humidity}%</span>
-                </div>
-                <div class="weather-detail">
-                    <span class="weather-detail-label">Wiatr</span>
-                    <span class="weather-detail-value">${weather.windSpeed} km/h</span>
-                </div>
-                <div class="weather-detail">
-                    <span class="weather-detail-label">Ciśnienie</span>
-                    <span class="weather-detail-value">${weather.pressure} hPa</span>
-                </div>
-                <div class="weather-detail">
-                    <span class="weather-detail-label">Widoczność</span>
-                    <span class="weather-detail-value">${weather.visibility} km</span>
-                </div>
-            </div>
-        `
-
-    return card
-  }
-
-  refreshWeather() {
-    this.triggerHapticFeedback()
-
-    // Simulate weather data update
-    this.weatherData = this.weatherData.map((weather) => ({
-      ...weather,
-      temperature: weather.temperature + (Math.random() - 0.5) * 4,
-      humidity: Math.max(20, Math.min(100, weather.humidity + (Math.random() - 0.5) * 20)),
-      windSpeed: Math.max(0, weather.windSpeed + (Math.random() - 0.5) * 10),
-      pressure: weather.pressure + (Math.random() - 0.5) * 20,
-    }))
-
-    this.renderWeather()
-    this.showToast("Dane pogodowe zostały odświeżone", "success")
-
-    // Animate refresh button
-    const refreshBtn = document.getElementById("refresh-weather")
-    if (refreshBtn) {
-      refreshBtn.style.transform = "rotate(360deg)"
-      setTimeout(() => {
-        refreshBtn.style.transform = ""
-      }, 500)
-    }
-  }
-
-  handleControlAction(event) {
-    const button = event.currentTarget
-    const action = button.dataset.action
-
-    this.triggerHapticFeedback()
-
-    // Toggle button state
-    button.classList.toggle("active")
-
-    // Update control state
-    switch (action) {
-      case "lighting":
-        this.controlStates.lighting = !this.controlStates.lighting
-        this.updateControlStatus("lighting-status", this.controlStates.lighting ? "ON" : "OFF")
-        break
-      case "temperature":
-        this.controlStates.temperature = this.controlStates.temperature === 22 ? 25 : 22
-        this.updateControlStatus("temperature-status", `${this.controlStates.temperature}°C`)
-        break
-      case "security":
-        this.controlStates.security = !this.controlStates.security
-        this.updateControlStatus("security-status", this.controlStates.security ? "AKTYWNE" : "NIEAKTYWNE")
-        break
-      case "ventilation":
-        this.controlStates.ventilation = this.controlStates.ventilation === "auto" ? "manual" : "auto"
-        this.updateControlStatus("ventilation-status", this.controlStates.ventilation.toUpperCase())
-        break
-      case "energy":
-        this.controlStates.energy = this.controlStates.energy === 85 ? 92 : 85
-        this.updateControlStatus("energy-status", `${this.controlStates.energy}%`)
-        break
-      case "water":
-        this.controlStates.water = this.controlStates.water === "ok" ? "low" : "ok"
-        this.updateControlStatus("water-status", this.controlStates.water.toUpperCase())
-        break
-    }
-
-    this.showToast(
-      `${this.getActionName(action)} zostało ${button.classList.contains("active") ? "włączone" : "wyłączone"}`,
-      "success",
-    )
-    this.updateControlStatusText()
-  }
-
-  getActionName(action) {
-    const names = {
-      lighting: "Oświetlenie",
-      temperature: "Kontrola temperatury",
-      security: "System bezpieczeństwa",
-      ventilation: "Wentylacja",
-      energy: "Zarządzanie energią",
-      water: "System wodny",
-    }
-    return names[action] || action
-  }
-
-  updateControlStatus(elementId, value) {
-    const element = document.getElementById(elementId)
-    if (element) {
-      element.textContent = value
-    }
-  }
-
-  updateControlStates() {
-    // Initialize control button states
-    Object.keys(this.controlStates).forEach((key) => {
-      const button = document.querySelector(`[data-action="${key}"]`)
-      if (button && (key === "security" || key === "lighting")) {
-        if (this.controlStates[key]) {
-          button.classList.add("active")
+        if (isUpSwipe) {
+          this.currentLocationIndex = (this.currentLocationIndex - 1 + this.locations.length) % this.locations.length
+          this.triggerHaptic([30, 50, 30])
+          this.updateLocationIndicators()
+          this.fetchWeatherData()
+        }
+        if (isDownSwipe) {
+          this.currentLocationIndex = (this.currentLocationIndex + 1) % this.locations.length
+          this.triggerHaptic([30, 50, 30])
+          this.updateLocationIndicators()
+          this.fetchWeatherData()
         }
       }
-    })
-
-    this.updateControlStatusText()
-  }
-
-  updateControlStatusText() {
-    const activeControls = Object.keys(this.controlStates).filter((key) => {
-      const state = this.controlStates[key]
-      return state === true || (typeof state === "string" && state !== "ok")
-    })
-
-    const statusElement = document.getElementById("control-status")
-    if (statusElement) {
-      statusElement.textContent = activeControls.length > 0 ? `Aktywne: ${activeControls.length}` : "Gotowy"
     }
   }
 
-  updateLastUpdateTime() {
-    this.lastUpdate = new Date()
-    const lastUpdateElement = document.getElementById("last-update")
-    if (lastUpdateElement) {
-      lastUpdateElement.textContent = `Ostatnia aktualizacja: ${this.formatTime(this.lastUpdate)}`
+  handleControlClick(e) {
+    const button = e.currentTarget
+    const buttonId = button.dataset.id
+
+    this.triggerHaptic([100, 50, 100])
+
+    // Visual feedback
+    button.style.transform = "scale(0.95)"
+    setTimeout(() => {
+      button.style.transform = ""
+    }, 150)
+
+    console.log(`Control button ${buttonId} pressed`)
+  }
+
+  triggerHaptic(pattern = 50) {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(pattern)
     }
   }
 
-  formatTime(date) {
-    return date.toLocaleTimeString("pl-PL", {
+  showWeatherView() {
+    this.currentView = "weather"
+    this.elements.weatherView.classList.remove("hidden")
+    this.elements.controlView.classList.add("hidden")
+  }
+
+  showControlView() {
+    this.currentView = "control"
+    this.elements.controlView.classList.remove("hidden")
+    this.elements.weatherView.classList.add("hidden")
+  }
+
+  updateLocationIndicators() {
+    this.elements.indicators.forEach((indicator, index) => {
+      if (index === this.currentLocationIndex) {
+        indicator.classList.add("active")
+      } else {
+        indicator.classList.remove("active")
+      }
+    })
+  }
+
+  checkApiRateLimit() {
+    const now = Date.now()
+    const dayInMs = 24 * 60 * 60 * 1000
+
+    // Reset counter if more than 24 hours have passed
+    if (now - this.lastApiReset > dayInMs) {
+      this.apiCalls = 0
+      this.lastApiReset = now
+      localStorage.setItem("api_calls", "0")
+      localStorage.setItem("api_last_reset", now.toString())
+    }
+
+    this.updateApiCallsDisplay()
+  }
+
+  canMakeApiCall() {
+    return this.isOnline && this.apiCalls < this.maxApiCalls
+  }
+
+  recordApiCall() {
+    this.apiCalls++
+    localStorage.setItem("api_calls", this.apiCalls.toString())
+    this.updateApiCallsDisplay()
+  }
+
+  updateApiCallsDisplay() {
+    const remaining = Math.max(0, this.maxApiCalls - this.apiCalls)
+    if (this.elements.apiCallsDisplay) {
+      this.elements.apiCallsDisplay.textContent = `API: ${remaining}`
+    }
+  }
+
+  updateConnectionStatus() {
+    if (this.elements.connectionStatus) {
+      if (this.isOnline) {
+        this.elements.connectionStatus.classList.remove("offline")
+        this.elements.connectionStatus.classList.add("online")
+      } else {
+        this.elements.connectionStatus.classList.remove("online")
+        this.elements.connectionStatus.classList.add("offline")
+      }
+    }
+
+    if (this.elements.statusText) {
+      this.elements.statusText.textContent = this.isOnline ? "ONLINE" : "OFFLINE"
+    }
+  }
+
+  async fetchWeatherData() {
+    const location = this.locations[this.currentLocationIndex]
+
+    this.showWeatherLoading()
+    this.hideApiError()
+
+    // Try to get cached data first
+    const cachedData = this.getCachedWeatherData(location.key)
+    if (cachedData && !this.canMakeApiCall()) {
+      this.displayWeatherData(cachedData)
+      this.showApiError("Używam danych z cache - limit API osiągnięty")
+      return
+    }
+
+    if (!this.canMakeApiCall()) {
+      this.displayWeatherData(this.getFallbackData(location))
+      this.showApiError("Limit API osiągnięty - używam danych offline")
+      return
+    }
+
+    try {
+      // Enhanced API call with more parameters
+      const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,showers,snowfall,snow_depth,weather_code,pressure_msl,surface_pressure,cloud_cover,visibility,evapotranspiration,et0_fao_evapotranspiration,vapour_pressure_deficit,wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_80m,temperature_120m,temperature_180m,soil_temperature_0cm,soil_temperature_6cm,soil_temperature_18cm,soil_temperature_54cm,soil_moisture_0_1cm,soil_moisture_1_3cm,soil_moisture_3_9cm,soil_moisture_9_27cm,soil_moisture_27_81cm&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,daylight_duration,sunshine_duration,uv_index_max,uv_index_clear_sky_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,precipitation_hours,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant,shortwave_radiation_sum,et0_fao_evapotranspiration&timezone=auto&forecast_days=7`
+
+      const response = await fetch(apiUrl)
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      this.recordApiCall()
+
+      const weatherData = this.processApiData(data, location)
+      this.displayWeatherData(weatherData)
+      this.cacheWeatherData(location.key, weatherData)
+    } catch (error) {
+      console.error("Weather API Error:", error)
+
+      // Try cached data
+      const cachedData = this.getCachedWeatherData(location.key)
+      if (cachedData) {
+        this.displayWeatherData(cachedData)
+        this.showApiError("Błąd API - używam danych z cache")
+      } else {
+        this.displayWeatherData(this.getFallbackData(location))
+        this.showApiError("Błąd API - używam danych offline")
+      }
+    }
+  }
+
+  processApiData(data, location) {
+    const current = data.current
+    const daily = data.daily
+    const hourly = data.hourly
+
+    const weatherCode = current.weather_code
+    const weatherInfo = this.weatherCodes[weatherCode] || {
+      condition: "Nieznane",
+      description: "brak danych",
+      icon: "❓",
+    }
+
+    // Process hourly forecast for next 24 hours
+    const currentHour = new Date().getHours()
+    const hourlyForecast = []
+
+    for (let i = 0; i < 24; i++) {
+      const hourIndex = currentHour + i
+      if (hourIndex < hourly.time.length) {
+        const hourWeatherCode = hourly.weather_code[hourIndex]
+        const hourWeatherInfo = this.weatherCodes[hourWeatherCode] || {
+          condition: "Nieznane",
+          description: "brak danych",
+          icon: "❓",
+        }
+
+        hourlyForecast.push({
+          time: this.formatTime(hourly.time[hourIndex]),
+          temperature: Math.round(hourly.temperature_2m[hourIndex]),
+          humidity: hourly.relative_humidity_2m[hourIndex],
+          precipitation: Math.round((hourly.precipitation[hourIndex] || 0) * 10) / 10,
+          windSpeed: Math.round(hourly.wind_speed_10m[hourIndex] || 0),
+          windDirection: hourly.wind_direction_10m[hourIndex] || 0,
+          pressure: Math.round(hourly.pressure_msl[hourIndex] || 0),
+          visibility: Math.round((hourly.visibility[hourIndex] || 0) / 1000),
+          weatherCode: hourWeatherCode,
+          icon: hourWeatherInfo.icon,
+          condition: hourWeatherInfo.condition,
+        })
+      }
+    }
+
+    // Process daily forecast for next 7 days
+    const dailyForecast = []
+    for (let i = 0; i < Math.min(7, daily.time.length); i++) {
+      const dayWeatherCode = daily.weather_code[i]
+      const dayWeatherInfo = this.weatherCodes[dayWeatherCode] || {
+        condition: "Nieznane",
+        description: "brak danych",
+        icon: "❓",
+      }
+
+      dailyForecast.push({
+        date: this.formatDate(daily.time[i]),
+        maxTemp: Math.round(daily.temperature_2m_max[i]),
+        minTemp: Math.round(daily.temperature_2m_min[i]),
+        weatherCode: dayWeatherCode,
+        icon: dayWeatherInfo.icon,
+        condition: dayWeatherInfo.condition,
+        sunrise: this.formatTime(daily.sunrise[i]),
+        sunset: this.formatTime(daily.sunset[i]),
+        precipitation: Math.round((daily.precipitation_sum[i] || 0) * 10) / 10,
+        windSpeed: Math.round(daily.wind_speed_10m_max[i] || 0),
+        uvIndex: Math.round(daily.uv_index_max[i] || 0),
+      })
+    }
+
+    return {
+      location: location.name,
+      temperature: Math.round(current.temperature_2m),
+      humidity: current.relative_humidity_2m,
+      windSpeed: Math.round(current.wind_speed_10m),
+      windDirection: current.wind_direction_10m,
+      condition: weatherInfo.condition,
+      description: weatherInfo.description,
+      icon: weatherInfo.icon,
+      sunrise: this.formatTime(daily.sunrise[0]),
+      sunset: this.formatTime(daily.sunset[0]),
+      pressure: Math.round(current.pressure_msl || current.surface_pressure),
+      visibility: Math.round((hourly.visibility[currentHour] || 10000) / 1000),
+      uvIndex: Math.round(daily.uv_index_max[0] || 0),
+      feelsLike: Math.round(current.apparent_temperature),
+      dewPoint: Math.round(hourly.dew_point_2m[currentHour] || 0),
+      cloudCover: current.cloud_cover || 0,
+      precipitation: Math.round((current.precipitation || 0) * 10) / 10,
+      hourlyForecast: hourlyForecast,
+      dailyForecast: dailyForecast,
+      timestamp: Date.now(),
+    }
+  }
+
+  formatTime(isoString) {
+    return new Date(isoString).toLocaleTimeString("pl-PL", {
       hour: "2-digit",
       minute: "2-digit",
     })
   }
 
-  startAutoUpdate() {
-    // Update weather every 5 minutes
-    this.updateInterval = setInterval(
+  formatDate(isoString) {
+    return new Date(isoString).toLocaleDateString("pl-PL", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    })
+  }
+
+  getWindDirection(degrees) {
+    const directions = [
+      "N",
+      "NNE",
+      "NE",
+      "ENE",
+      "E",
+      "ESE",
+      "SE",
+      "SSE",
+      "S",
+      "SSW",
+      "SW",
+      "WSW",
+      "W",
+      "WNW",
+      "NW",
+      "NNW",
+    ]
+    const index = Math.round(degrees / 22.5) % 16
+    return directions[index]
+  }
+
+  displayWeatherData(weatherData) {
+    // Basic weather info
+    if (this.elements.locationName) {
+      this.elements.locationName.textContent = weatherData.location
+    }
+
+    if (this.elements.weatherIcon) {
+      this.elements.weatherIcon.textContent = weatherData.icon
+    }
+
+    if (this.elements.temperature) {
+      this.elements.temperature.textContent = `${weatherData.temperature}°C`
+    }
+
+    if (this.elements.condition) {
+      this.elements.condition.textContent = weatherData.condition
+    }
+
+    if (this.elements.description) {
+      this.elements.description.textContent = weatherData.description
+    }
+
+    if (this.elements.humidity) {
+      this.elements.humidity.textContent = `${weatherData.humidity}%`
+    }
+
+    if (this.elements.windSpeed) {
+      const windDir = weatherData.windDirection ? this.getWindDirection(weatherData.windDirection) : ""
+      this.elements.windSpeed.textContent = `${weatherData.windSpeed} km/h ${windDir}`.trim()
+    }
+
+    // Sun times
+    if (this.elements.sunrise && weatherData.sunrise) {
+      this.elements.sunrise.textContent = weatherData.sunrise
+    }
+
+    if (this.elements.sunset && weatherData.sunset) {
+      this.elements.sunset.textContent = weatherData.sunset
+    }
+
+    // Extended weather details
+    if (this.elements.pressure && weatherData.pressure) {
+      this.elements.pressure.textContent = `${weatherData.pressure} hPa`
+    }
+
+    if (this.elements.visibility && weatherData.visibility) {
+      this.elements.visibility.textContent = `${weatherData.visibility} km`
+    }
+
+    if (this.elements.uvIndex && weatherData.uvIndex !== undefined) {
+      this.elements.uvIndex.textContent = weatherData.uvIndex.toString()
+    }
+
+    if (this.elements.feelsLike && weatherData.feelsLike) {
+      this.elements.feelsLike.textContent = `${weatherData.feelsLike}°C`
+    }
+
+    if (this.elements.dewPoint && weatherData.dewPoint) {
+      this.elements.dewPoint.textContent = `${weatherData.dewPoint}°C`
+    }
+
+    // Display hourly forecast (next 12 hours)
+    if (this.elements.hourlyList && weatherData.hourlyForecast) {
+      this.elements.hourlyList.innerHTML = ""
+      weatherData.hourlyForecast.slice(0, 12).forEach((hour) => {
+        const hourElement = document.createElement("div")
+        hourElement.className = "hourly-item"
+        hourElement.innerHTML = `
+          <div class="hourly-time">${hour.time}</div>
+          <div class="hourly-icon">${hour.icon}</div>
+          <div class="hourly-temp">${hour.temperature}°</div>
+          <div class="hourly-humidity">${hour.humidity}%</div>
+          <div class="hourly-condition">${hour.condition}</div>
+          <div class="hourly-wind">${hour.windSpeed} km/h</div>
+        `
+        this.elements.hourlyList.appendChild(hourElement)
+      })
+    }
+
+    // Display daily forecast
+    if (this.elements.dailyList && weatherData.dailyForecast) {
+      this.elements.dailyList.innerHTML = ""
+      weatherData.dailyForecast.forEach((day) => {
+        const dayElement = document.createElement("div")
+        dayElement.className = "daily-item"
+        dayElement.innerHTML = `
+          <div class="daily-date">${day.date}</div>
+          <div class="daily-weather">
+            <div class="daily-icon">${day.icon}</div>
+            <div class="daily-condition">${day.condition}</div>
+          </div>
+          <div class="daily-temps">
+            <span class="daily-max">${day.maxTemp}°</span>
+            <span class="daily-min">${day.minTemp}°</span>
+          </div>
+        `
+        this.elements.dailyList.appendChild(dayElement)
+      })
+    }
+
+    if (this.elements.lastUpdate) {
+      this.elements.lastUpdate.textContent = `Ostatnia aktualizacja: ${new Date(weatherData.timestamp).toLocaleTimeString("pl-PL")}`
+    }
+
+    this.showWeatherData()
+  }
+
+  showWeatherLoading() {
+    if (this.elements.weatherLoading) {
+      this.elements.weatherLoading.classList.remove("hidden")
+    }
+    if (this.elements.weatherData) {
+      this.elements.weatherData.classList.add("hidden")
+    }
+    if (this.elements.weatherError) {
+      this.elements.weatherError.classList.add("hidden")
+    }
+  }
+
+  showWeatherData() {
+    if (this.elements.weatherLoading) {
+      this.elements.weatherLoading.classList.add("hidden")
+    }
+    if (this.elements.weatherData) {
+      this.elements.weatherData.classList.remove("hidden")
+    }
+    if (this.elements.weatherError) {
+      this.elements.weatherError.classList.add("hidden")
+    }
+  }
+
+  showWeatherError() {
+    if (this.elements.weatherLoading) {
+      this.elements.weatherLoading.classList.add("hidden")
+    }
+    if (this.elements.weatherData) {
+      this.elements.weatherData.classList.add("hidden")
+    }
+    if (this.elements.weatherError) {
+      this.elements.weatherError.classList.remove("hidden")
+    }
+  }
+
+  showApiError(message) {
+    if (this.elements.apiError) {
+      this.elements.apiError.textContent = message
+      this.elements.apiError.classList.remove("hidden")
+    }
+  }
+
+  hideApiError() {
+    if (this.elements.apiError) {
+      this.elements.apiError.classList.add("hidden")
+    }
+  }
+
+  cacheWeatherData(locationKey, data) {
+    const cacheKey = `weather_${locationKey}`
+    const cacheData = {
+      data: data,
+      timestamp: Date.now(),
+      expires: Date.now() + 30 * 60 * 1000, // 30 minutes
+    }
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData))
+  }
+
+  getCachedWeatherData(locationKey) {
+    const cacheKey = `weather_${locationKey}`
+    const cached = localStorage.getItem(cacheKey)
+
+    if (cached) {
+      try {
+        const cacheData = JSON.parse(cached)
+        if (Date.now() < cacheData.expires) {
+          return cacheData.data
+        }
+      } catch (e) {
+        console.error("Error parsing cached data:", e)
+      }
+    }
+
+    return null
+  }
+
+  getFallbackData(location) {
+    // Enhanced static fallback data
+    const fallbackData = {
+      konopnica: {
+        location: "Konopnica",
+        temperature: 18,
+        humidity: 65,
+        windSpeed: 12,
+        windDirection: 225,
+        condition: "Słonecznie",
+        description: "bezchmurne niebo",
+        icon: "☀️",
+        sunrise: "06:30",
+        sunset: "19:45",
+        pressure: 1013,
+        visibility: 10,
+        uvIndex: 5,
+        feelsLike: 20,
+        dewPoint: 12,
+        cloudCover: 15,
+        precipitation: 0,
+        hourlyForecast: this.generateFallbackHourlyData(),
+        dailyForecast: this.generateFallbackDailyData(),
+        timestamp: Date.now(),
+      },
+      warszawa: {
+        location: "Warszawa",
+        temperature: 20,
+        humidity: 58,
+        windSpeed: 8,
+        windDirection: 180,
+        condition: "Częściowo pochmurno",
+        description: "częściowe zachmurzenie",
+        icon: "⛅",
+        sunrise: "06:25",
+        sunset: "19:50",
+        pressure: 1015,
+        visibility: 8,
+        uvIndex: 4,
+        feelsLike: 22,
+        dewPoint: 10,
+        cloudCover: 45,
+        precipitation: 0,
+        hourlyForecast: this.generateFallbackHourlyData(),
+        dailyForecast: this.generateFallbackDailyData(),
+        timestamp: Date.now(),
+      },
+      wielun: {
+        location: "Wieluń",
+        temperature: 16,
+        humidity: 72,
+        windSpeed: 15,
+        windDirection: 270,
+        condition: "Pochmurno",
+        description: "zachmurzenie",
+        icon: "☁️",
+        sunrise: "06:35",
+        sunset: "19:40",
+        pressure: 1010,
+        visibility: 6,
+        uvIndex: 2,
+        feelsLike: 14,
+        dewPoint: 11,
+        cloudCover: 85,
+        precipitation: 0.2,
+        hourlyForecast: this.generateFallbackHourlyData(),
+        dailyForecast: this.generateFallbackDailyData(),
+        timestamp: Date.now(),
+      },
+    }
+
+    return fallbackData[location.key] || fallbackData.wielun
+  }
+
+  generateFallbackHourlyData() {
+    const hours = []
+    const baseTemp = 18
+    const currentHour = new Date().getHours()
+
+    for (let i = 0; i < 12; i++) {
+      const hour = (currentHour + i) % 24
+      const temp = baseTemp + Math.sin(((hour - 6) * Math.PI) / 12) * 5
+
+      hours.push({
+        time: `${hour.toString().padStart(2, "0")}:00`,
+        temperature: Math.round(temp),
+        humidity: 60 + Math.random() * 20,
+        precipitation: Math.random() * 0.5,
+        windSpeed: 8 + Math.random() * 10,
+        windDirection: Math.random() * 360,
+        pressure: 1010 + Math.random() * 10,
+        visibility: 8 + Math.random() * 4,
+        weatherCode: hour > 6 && hour < 19 ? 1 : 2,
+        icon: hour > 6 && hour < 19 ? "🌤️" : "⛅",
+        condition: hour > 6 && hour < 19 ? "Słonecznie" : "Pochmurno",
+      })
+    }
+
+    return hours
+  }
+
+  generateFallbackDailyData() {
+    const days = []
+    const dayNames = ["Dzisiaj", "Jutro", "Śro", "Czw", "Pią", "Sob", "Nie"]
+    const icons = ["☀️", "⛅", "☁️", "🌧️", "🌤️", "⛅", "☀️"]
+    const conditions = [
+      "Słonecznie",
+      "Częściowo pochmurno",
+      "Pochmurno",
+      "Deszcz",
+      "Słonecznie",
+      "Częściowo pochmurno",
+      "Słonecznie",
+    ]
+
+    for (let i = 0; i < 7; i++) {
+      const maxTemp = 18 + Math.random() * 8
+      const minTemp = maxTemp - 5 - Math.random() * 5
+
+      days.push({
+        date: dayNames[i] || `Dzień ${i + 1}`,
+        maxTemp: Math.round(maxTemp),
+        minTemp: Math.round(minTemp),
+        weatherCode: i,
+        icon: icons[i],
+        condition: conditions[i],
+        sunrise: "06:30",
+        sunset: "19:45",
+        precipitation: Math.random() * 2,
+        windSpeed: 8 + Math.random() * 12,
+        uvIndex: Math.round(Math.random() * 8),
+      })
+    }
+
+    return days
+  }
+
+  setupAutoRefresh() {
+    // Refresh every 10 minutes if we can make API calls
+    setInterval(
       () => {
-        if (!document.hidden) {
-          this.refreshWeather()
+        if (!document.hidden && this.canMakeApiCall()) {
+          this.fetchWeatherData()
         }
       },
-      5 * 60 * 1000,
-    )
+      10 * 60 * 1000,
+    ) // 10 minutes
   }
 
-  updateConnectionStatus(isOnline) {
-    const statusElement = document.getElementById("connection-status")
-    if (statusElement) {
-      statusElement.textContent = isOnline ? "ONLINE" : "OFFLINE"
-      statusElement.className = `status-indicator ${isOnline ? "online" : "offline"}`
-    }
-
-    if (isOnline) {
-      this.showToast("Połączenie przywrócone", "success")
-    } else {
-      this.showToast("Tryb offline - aplikacja działa lokalnie", "warning")
-    }
-  }
-
-  setupPWA() {
-    // Check if app is already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      this.hideInstallButton()
-    }
-
-    // Update connection status
-    this.updateConnectionStatus(navigator.onLine)
-  }
-
-  showInstallButton() {
-    const installBtn = document.getElementById("install-btn")
-    if (installBtn) {
-      installBtn.style.display = "flex"
-    }
-  }
-
-  hideInstallButton() {
-    const installBtn = document.getElementById("install-btn")
-    if (installBtn) {
-      installBtn.style.display = "none"
-    }
-  }
-
-  async installApp() {
-    if (!this.deferredPrompt) return
-
-    this.deferredPrompt.prompt()
-    const { outcome } = await this.deferredPrompt.userChoice
-
-    if (outcome === "accepted") {
-      this.showToast("Instalowanie aplikacji...", "success")
-    }
-
-    this.deferredPrompt = null
-    this.hideInstallButton()
-  }
-
-  setupHapticFeedback() {
-    // Check if device supports haptic feedback
-    this.hasHapticFeedback = "vibrate" in navigator
-  }
-
-  triggerHapticFeedback() {
-    if (this.hasHapticFeedback) {
-      navigator.vibrate(50) // Short vibration
-    }
-  }
-
-  showToast(message, type = "info", duration = 3000) {
-    const toastContainer = document.getElementById("toast-container")
-    if (!toastContainer) return
-
-    const toast = document.createElement("div")
-    toast.className = `toast ${type}`
-
-    const title =
-      type === "success" ? "Sukces" : type === "error" ? "Błąd" : type === "warning" ? "Uwaga" : "Informacja"
-
-    toast.innerHTML = `
-            <div class="toast-title">${title}</div>
-            <div class="toast-message">${message}</div>
-        `
-
-    toastContainer.appendChild(toast)
-
-    // Auto remove toast
+  hideLoadingScreen() {
     setTimeout(() => {
-      if (toast.parentNode) {
-        toast.style.opacity = "0"
-        toast.style.transform = "translateX(100%)"
+      if (this.elements.loadingScreen) {
+        this.elements.loadingScreen.style.opacity = "0"
         setTimeout(() => {
-          toast.remove()
+          this.elements.loadingScreen.style.display = "none"
         }, 300)
       }
-    }, duration)
-
-    // Click to dismiss
-    toast.addEventListener("click", () => {
-      toast.style.opacity = "0"
-      toast.style.transform = "translateX(100%)"
-      setTimeout(() => {
-        toast.remove()
-      }, 300)
-    })
-  }
-
-  // Cleanup method
-  destroy() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval)
-    }
-  }
-}
-
-// Lazy loading for images
-class LazyImageLoader {
-  constructor() {
-    this.images = document.querySelectorAll("img[data-src]")
-    this.imageObserver = null
-    this.init()
-  }
-
-  init() {
-    if ("IntersectionObserver" in window) {
-      this.imageObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            this.loadImage(entry.target)
-            this.imageObserver.unobserve(entry.target)
-          }
-        })
-      })
-
-      this.images.forEach((img) => this.imageObserver.observe(img))
-    } else {
-      // Fallback for older browsers
-      this.images.forEach((img) => this.loadImage(img))
-    }
-  }
-
-  loadImage(img) {
-    const src = img.dataset.src
-    if (src) {
-      img.src = src
-      img.classList.add("loaded")
-      img.removeAttribute("data-src")
-    }
-  }
-}
-
-// Performance monitoring
-class PerformanceMonitor {
-  constructor() {
-    this.metrics = {}
-    this.init()
-  }
-
-  init() {
-    // Monitor page load performance
-    window.addEventListener("load", () => {
-      this.measurePageLoad()
-    })
-
-    // Monitor user interactions
-    this.measureUserInteractions()
-  }
-
-  measurePageLoad() {
-    if ("performance" in window) {
-      const navigation = performance.getEntriesByType("navigation")[0]
-      if (navigation) {
-        this.metrics.loadTime = navigation.loadEventEnd - navigation.loadEventStart
-        this.metrics.domContentLoaded = navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart
-        this.metrics.firstPaint = performance
-          .getEntriesByType("paint")
-          .find((entry) => entry.name === "first-paint")?.startTime
-
-        console.log("Performance Metrics:", this.metrics)
-      }
-    }
-  }
-
-  measureUserInteractions() {
-    let interactionCount = 0
-    ;["click", "touch", "keydown"].forEach((eventType) => {
-      document.addEventListener(
-        eventType,
-        () => {
-          interactionCount++
-        },
-        { passive: true },
-      )
-    })
-
-    // Log interaction count every minute
-    setInterval(() => {
-      if (interactionCount > 0) {
-        console.log(`User interactions in last minute: ${interactionCount}`)
-        interactionCount = 0
-      }
-    }, 60000)
+    }, 2000)
   }
 }
 
 // Initialize app when DOM is loaded
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize main app
   window.weatherApp = new WeatherApp()
-
-  // Initialize lazy loading
-  window.lazyLoader = new LazyImageLoader()
-
-  // Initialize performance monitoring
-  window.performanceMonitor = new PerformanceMonitor()
-
-  // Global error handling
-  window.addEventListener("error", (event) => {
-    console.error("Global error:", event.error)
-    if (window.weatherApp) {
-      window.weatherApp.showToast("Wystąpił błąd aplikacji", "error")
-    }
-  })
-
-  // Handle unhandled promise rejections
-  window.addEventListener("unhandledrejection", (event) => {
-    console.error("Unhandled promise rejection:", event.reason)
-    if (window.weatherApp) {
-      window.weatherApp.showToast("Wystąpił błąd aplikacji", "error")
-    }
-  })
 })
 
-// Cleanup on page unload
-window.addEventListener("beforeunload", () => {
-  if (window.weatherApp) {
-    window.weatherApp.destroy()
-  }
+// Global error handling
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error)
+})
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled promise rejection:", event.reason)
+  event.preventDefault()
 })

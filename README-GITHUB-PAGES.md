@@ -1,231 +1,189 @@
-# Panel Sterowania - GitHub Pages
+# Panel Sterowania - GitHub Pages Deployment
 
-Mobilny panel sterowania z pogodą dla regionu Wieluń. Aplikacja działa w 100% offline bez potrzeby serwera.
+## 🌟 Real Weather API Integration
 
-## 🚀 Wdrożenie na GitHub Pages
+Aplikacja teraz używa **prawdziwego API pogodowego** z Open-Meteo dla trzech lokalizacji:
+- **Konopnica** (51.221°N, 18.5696°E)
+- **Warszawa** (52.2298°N, 21.0118°E) 
+- **Wieluń** (51.3538°N, 18.8236°E)
 
-### Automatyczne wdrożenie
+## 🚀 Funkcjonalności
+
+### ☁️ Prawdziwe dane pogodowe
+- Aktualna temperatura, wilgotność, prędkość wiatru
+- Warunki pogodowe z ikonami
+- Wschód i zachód słońca
+- Prognoza godzinowa (następne 6 godzin)
+- Automatyczne odświeżanie co 10 minut
+
+### 📱 Mobilna nawigacja
+- **Swipe left/right** - przełączanie pogoda ↔ panel sterowania
+- **Swipe up/down** - zmiana lokalizacji (tylko w widoku pogody)
+- **Haptic feedback** - wibracje przy dotykach
+- **Touch-friendly** - zoptymalizowane dla urządzeń mobilnych
+
+### 🔄 Inteligentne cache'owanie
+- **API Rate Limiting** - maksymalnie 9000 wywołań/dzień
+- **Smart caching** - dane cache'owane na 30 minut
+- **Offline fallback** - statyczne dane gdy brak internetu
+- **Service Worker** - pełna funkcjonalność offline
+
+### 📊 Monitoring API
+- Licznik pozostałych wywołań API
+- Status połączenia (ONLINE/OFFLINE)
+- Informacje o błędach API
+- Automatyczne przełączanie na cache
+
+## 🛠️ Deployment na GitHub Pages
+
+### 1. Przygotowanie repozytorium
 
 \`\`\`bash
-# 1. Zbuduj wersję GitHub Pages
+# Sklonuj lub utwórz repozytorium
+git clone https://github.com/[username]/[repository-name].git
+cd [repository-name]
+
+# Zainstaluj zależności
+npm install
+\`\`\`
+
+### 2. Build i deployment
+
+\`\`\`bash
+# Zbuduj aplikację dla GitHub Pages
 ./scripts/build-github-pages.sh
 
-# 2. Commit i push
+# Dodaj pliki do git
 git add docs/
-git commit -m "Deploy GitHub Pages version"
+git commit -m "Deploy weather app with real API to GitHub Pages"
 git push origin main
 \`\`\`
 
-### Konfiguracja w GitHub
+### 3. Konfiguracja GitHub Pages
 
-1. Przejdź do **Settings** → **Pages**
-2. Wybierz **Source**: "Deploy from a branch"
-3. Wybierz **Branch**: `main`
-4. Wybierz **Folder**: `/docs`
-5. Kliknij **Save**
+1. Idź do **Settings** → **Pages** w swoim repozytorium
+2. W sekcji **Source** wybierz:
+   - **Deploy from a branch**
+   - **Branch**: `main`
+   - **Folder**: `/docs`
+3. Kliknij **Save**
 
-### Własna domena (opcjonalnie)
+### 4. Dostęp do aplikacji
 
-\`\`\`bash
-# Ustaw zmienną środowiskową przed budowaniem
-export CUSTOM_DOMAIN="twoja-domena.com"
-./scripts/build-github-pages.sh
+Aplikacja będzie dostępna pod adresem:
+\`\`\`
+https://[username].github.io/[repository-name]/
 \`\`\`
 
-## 📱 Funkcje aplikacji
+## 🔧 Konfiguracja API
 
-### ✅ Pogoda offline
-- **5 lokalizacji**: Wieluń, Częstochowa, Kalisz, Łódź, Sieradz
-- **Symulacja danych**: Realistyczne dane pogodowe
-- **Auto-refresh**: Aktualizacja co 5 minut
-- **Animacje**: Smooth transitions i loading states
+### Open-Meteo API
+- **Dostawca**: [Open-Meteo](https://open-meteo.com/)
+- **Limit**: 10,000 wywołań/dzień (darmowe)
+- **Endpoint**: `https://api.open-meteo.com/v1/forecast`
+- **Bez klucza API** - publiczne API
 
-### 🎛️ Panel sterowania
-- **6 systemów**: Oświetlenie, Temperatura, Bezpieczeństwo, Wentylacja, Energia, Woda
-- **Haptic feedback**: Wibracje na dotyk (mobile)
-- **Status tracking**: Śledzenie stanu wszystkich systemów
-- **Toast notifications**: Powiadomienia o akcjach
-
-### 📱 PWA Features
-- **Instalowalna**: Dodaj do ekranu głównego
-- **Offline-first**: Działa bez internetu
-- **Service Worker**: Zaawansowane cache'owanie
-- **Responsive**: Dostosowana do wszystkich urządzeń
-
-## 🛠️ Struktura plików
-
-\`\`\`
-docs/                          # GitHub Pages deployment
-├── index.html                 # Główna strona aplikacji
-├── styles.css                 # Style CSS (bez frameworków)
-├── script.js                  # Vanilla JavaScript
-├── manifest.json              # PWA manifest
-├── sw.js                      # Service Worker
-├── offline.html               # Strona offline
-├── images/                    # Obrazy WebP
-│   ├── screenshot-mobile-weather.webp
-│   └── screenshot-mobile-control.webp
-├── icon-*.png                 # Ikony PWA (różne rozmiary)
-├── favicon.ico                # Favicon
-├── robots.txt                 # SEO
-├── sitemap.xml                # Mapa strony
-└── .nojekyll                  # Bypass Jekyll
+### Parametry API
+\`\`\`javascript
+const apiUrl = `https://api.open-meteo.com/v1/forecast?
+  latitude=${lat}&longitude=${lon}&
+  daily=weather_code,sunrise,sunset,sunshine_duration&
+  hourly=temperature_2m,relative_humidity_2m,rain,snowfall,surface_pressure,visibility,precipitation,wind_speed_10m&
+  current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&
+  timezone=auto&forecast_days=1`
 \`\`\`
 
-## 🎨 Technologie
+## 📱 PWA Features
 
-### Frontend Stack
-- **HTML5**: Semantyczny markup
-- **CSS3**: Custom Properties, Flexbox, Grid
-- **JavaScript ES6+**: Modules, Classes, Async/Await
-- **PWA**: Service Worker, Web App Manifest
-
-### Optymalizacje
-- **WebP images**: 50-80% mniejsze pliki
-- **Lazy loading**: Ładowanie obrazów na żądanie
-- **CSS/JS minification**: Kompresja plików
-- **Gzip compression**: Automatyczna kompresja GitHub Pages
-
-### Responsywność
-- **Mobile-first**: Projektowanie od najmniejszych ekranów
-- **Breakpoints**: 320px, 480px, 768px, 1024px+
-- **Touch-friendly**: Duże obszary dotykowe
-- **Landscape support**: Orientacja pozioma
-
-## 🔧 Rozwój lokalny
-
-### Wymagania
-- Przeglądarka z obsługą Service Workers
-- Serwer HTTP (np. `python -m http.server`)
-
-### Uruchomienie
-\`\`\`bash
-# Serwuj pliki lokalnie
-cd docs
-python -m http.server 8000
-
-# Lub użyj Node.js
-npx serve .
-
-# Otwórz http://localhost:8000
-\`\`\`
-
-### Testowanie PWA
-\`\`\`bash
-# Testuj Service Worker
-chrome://inspect/#service-workers
-
-# Testuj offline mode
-DevTools → Network → Offline
-
-# Testuj instalację
-DevTools → Application → Manifest
-\`\`\`
-
-## 📊 Performance
-
-### Lighthouse Score (cel)
-- **Performance**: 95+
-- **Accessibility**: 100
-- **Best Practices**: 100
-- **SEO**: 95+
-- **PWA**: 100
-
-### Core Web Vitals
-- **LCP**: < 2.5s (Largest Contentful Paint)
-- **FID**: < 100ms (First Input Delay)
-- **CLS**: < 0.1 (Cumulative Layout Shift)
-
-### Optymalizacje
-- **Critical CSS**: Inline w `<head>`
-- **Resource hints**: Preload, prefetch
-- **Image optimization**: WebP + lazy loading
-- **Code splitting**: Modularny JavaScript
-
-## 🔒 Bezpieczeństwo
-
-### Content Security Policy
-\`\`\`html
-<meta http-equiv="Content-Security-Policy" 
-      content="default-src 'self'; 
-               script-src 'self' 'unsafe-inline'; 
-               style-src 'self' 'unsafe-inline';">
-\`\`\`
-
-### HTTPS
-- GitHub Pages automatycznie wymusza HTTPS
-- Service Worker wymaga HTTPS do działania
-
-## 🌐 SEO
-
-### Meta tags
-- Open Graph dla social media
-- Twitter Cards
-- Structured data (JSON-LD)
-
-### Sitemap
-- Automatycznie generowany `sitemap.xml`
-- Rejestracja w Google Search Console
-
-## 📈 Analytics (opcjonalnie)
-
-### Google Analytics 4
-\`\`\`html
- Dodaj przed </head> 
-<script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'GA_MEASUREMENT_ID');
-</script>
-\`\`\`
-
-## 🐛 Debugging
+### Instalacja jako aplikacja
+- Manifest.json z pełną konfiguracją
+- Ikony w różnych rozmiarach
+- Standalone mode
+- Splash screen
 
 ### Service Worker
+- Cache'owanie statycznych plików
+- Cache'owanie odpowiedzi API
+- Offline functionality
+- Background sync (przyszłość)
+
+### Optymalizacje
+- WebP images z fallback
+- Lazy loading
+- Minifikacja CSS/JS
+- Gzip compression
+
+## 🎯 Użytkowanie
+
+### Nawigacja gestami
+1. **Pogoda → Panel**: Swipe w lewo
+2. **Panel → Pogoda**: Swipe w prawo  
+3. **Zmiana lokalizacji**: Swipe góra/dół (tylko w pogodzie)
+
+### Funkcje pogodowe
+- Automatyczne odświeżanie
+- Cache'owanie danych
+- Fallback na dane offline
+- Monitoring limitów API
+
+### Panel sterowania
+- 6 przycisków sterowania
+- Haptic feedback
+- Visual feedback
+- Symulacja akcji
+
+## 🔍 Monitoring i debugging
+
+### Console logs
 \`\`\`javascript
-// W DevTools Console
-navigator.serviceWorker.getRegistrations().then(registrations => {
-  registrations.forEach(registration => registration.unregister());
-});
+// Sprawdź status API
+console.log('API calls remaining:', weatherApp.apiCalls)
+
+// Sprawdź cache
+console.log('Cached data:', localStorage.getItem('weather_konopnica'))
+
+// Service Worker status
+navigator.serviceWorker.ready.then(reg => console.log('SW ready:', reg))
 \`\`\`
 
-### Cache
-\`\`\`javascript
-// Wyczyść cache
-caches.keys().then(names => {
-  names.forEach(name => caches.delete(name));
-});
-\`\`\`
+### Local Storage
+- `api_calls` - liczba wykonanych wywołań API
+- `api_last_reset` - ostatni reset licznika
+- `weather_[location]` - cache'owane dane pogodowe
 
-## 📝 Changelog
+## 🚨 Troubleshooting
 
-### v1.0.0 (2024-01-XX)
-- ✅ Pierwsza wersja GitHub Pages
-- ✅ Pełna funkcjonalność offline
-- ✅ PWA z Service Worker
-- ✅ Responsywny design
-- ✅ WebP images + lazy loading
+### Problem z API
+- Sprawdź limit wywołań w konsoli
+- Sprawdź połączenie internetowe
+- Sprawdź cache w Local Storage
 
-## 🤝 Contributing
+### Problem z GitHub Pages
+- Sprawdź czy folder `/docs` istnieje
+- Sprawdź ustawienia Pages w repozytorium
+- Sprawdź czy `.nojekyll` jest w folderze docs
 
-1. Fork repository
-2. Stwórz branch: `git checkout -b feature/nazwa`
-3. Commit: `git commit -m 'Add feature'`
-4. Push: `git push origin feature/nazwa`
-5. Stwórz Pull Request
+### Problem z PWA
+- Sprawdź manifest.json
+- Sprawdź Service Worker w DevTools
+- Sprawdź HTTPS (wymagane dla PWA)
+
+## 📈 Przyszłe ulepszenia
+
+- [ ] Push notifications dla alertów pogodowych
+- [ ] Więcej lokalizacji
+- [ ] Prognoza 7-dniowa
+- [ ] Mapy pogodowe
+- [ ] Eksport danych
+- [ ] Personalizacja interfejsu
+- [ ] Integracja z IoT devices
 
 ## 📄 Licencja
 
-MIT License - zobacz [LICENSE](LICENSE) dla szczegółów.
-
-## 🆘 Wsparcie
-
-- **Issues**: [GitHub Issues](../../issues)
-- **Dokumentacja**: [Wiki](../../wiki)
-- **Email**: support@example.com
+MIT License - możesz swobodnie używać, modyfikować i dystrybuować.
 
 ---
 
-**Panel Sterowania** - Mobilna aplikacja PWA dla regionu Wieluń 🏠📱
+**Aplikacja gotowa do użycia! 🎉**
+
+Prawdziwe dane pogodowe, pełna funkcjonalność offline, intuicyjna nawigacja gestami i profesjonalny deployment na GitHub Pages.

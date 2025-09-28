@@ -1,80 +1,40 @@
 {
   "name": "Panel Sterowania - Wieluń",
   "short_name": "Panel Sterowania",
-  "description": "Mobilny panel sterowania z pogodą dla regionu Wieluń. Działa offline bez potrzeby serwera.",
-  "start_url": "./index.html",
+  "description": "Mobilny panel sterowania z prawdziwą pogodą dla Konopnicy, Wielunia i Warszawy",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
+  "background_color": "#1a1a1a",
   "theme_color": "#3b82f6",
-  "orientation": "portrait-primary",
-  "scope": "./",
+  "orientation": "portrait",
+  "scope": "/",
   "lang": "pl",
-  "dir": "ltr",
-  "categories": ["utilities", "productivity", "weather"],
+  "categories": ["utilities", "weather", "productivity"],
   "icons": [
     {
-      "src": "./icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "src": "./favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
     },
     {
-      "src": "./icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "src": "./favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
     },
     {
-      "src": "./icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     },
     {
-      "src": "./icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "./icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "./icon-192x192.png",
+      "src": "./android-chrome-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "type": "image/png"
     },
     {
-      "src": "./icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "./icon-512x512.png",
+      "src": "./android-chrome-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "./images/screenshot-mobile-weather.webp",
-      "sizes": "390x844",
-      "type": "image/webp",
-      "platform": "narrow",
-      "label": "Widok pogody na telefonie"
-    },
-    {
-      "src": "./images/screenshot-mobile-control.webp",
-      "sizes": "390x844",
-      "type": "image/webp",
-      "platform": "narrow",
-      "label": "Panel sterowania na telefonie"
+      "type": "image/png"
     }
   ],
   "shortcuts": [
@@ -82,11 +42,11 @@
       "name": "Pogoda",
       "short_name": "Pogoda",
       "description": "Sprawdź aktualną pogodę",
-      "url": "./index.html#weather",
+      "url": "/?view=weather",
       "icons": [
         {
-          "src": "./icon-96x96.png",
-          "sizes": "96x96"
+          "src": "./favicon-32x32.png",
+          "sizes": "32x32"
         }
       ]
     },
@@ -94,21 +54,29 @@
       "name": "Panel sterowania",
       "short_name": "Panel",
       "description": "Otwórz panel sterowania",
-      "url": "./index.html#control",
+      "url": "/?view=control",
       "icons": [
         {
-          "src": "./icon-96x96.png",
-          "sizes": "96x96"
+          "src": "./favicon-32x32.png",
+          "sizes": "32x32"
         }
       ]
     }
   ],
-  "related_applications": [],
-  "prefer_related_applications": false,
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  }
+  "screenshots": [
+    {
+      "src": "./images/screenshot-mobile-weather.webp",
+      "sizes": "390x844",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Widok pogody na telefonie"
+    },
+    {
+      "src": "./images/screenshot-mobile-control.webp",
+      "sizes": "390x844",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Panel sterowania na telefonie"
+    }
+  ]
 }

@@ -1,123 +1,114 @@
 #!/bin/bash
 
 # Image optimization script
-echo "🖼️ Optimizing images for web..."
+TARGET_DIR=${1:-"public"}
 
-# Create optimized images directory
-mkdir -p public/images/optimized
+echo "🖼️ Optimizing images in $TARGET_DIR..."
 
-# Function to convert and optimize images
-optimize_image() {
-    local input_file="$1"
-    local output_file="$2"
-    local quality="$3"
+# Check if target directory exists
+if [ ! -d "$TARGET_DIR" ]; then
+    echo "❌ Target directory $TARGET_DIR does not exist"
+    exit 1
+fi
+
+# Function to optimize PNG files
+optimize_png() {
+    local file="$1"
+    echo "   Optimizing PNG: $(basename "$file")"
     
-    if command -v cwebp >/dev/null 2>&1; then
-        # Use WebP if available
-        cwebp -q "$quality" "$input_file" -o "${output_file%.png}.webp"
-        echo "✅ Converted $input_file to WebP"
-    elif command -v convert >/dev/null 2>&1; then
-        # Use ImageMagick if available
-        convert "$input_file" -quality "$quality" -strip "$output_file"
-        echo "✅ Optimized $input_file"
+    # Use built-in tools or skip if not available
+    if command -v pngcrush >/dev/null 2>&1; then
+        pngcrush -reduce -brute "$file" "${file}.tmp" && mv "${file}.tmp" "$file"
+    elif command -v optipng >/dev/null 2>&1; then
+        optipng -o7 "$file"
     else
-        # Fallback - just copy
-        cp "$input_file" "$output_file"
-        echo "⚠️ No optimization tools found, copied $input_file"
+        echo "   ⚠️ No PNG optimizer found, skipping"
     fi
 }
 
-# Optimize existing images
-if [ -d "public/images" ]; then
-    for img in public/images/*.{png,jpg,jpeg}; do
-        if [ -f "$img" ]; then
-            filename=$(basename "$img")
-            optimize_image "$img" "public/images/optimized/$filename" 80
-        fi
-    done
-fi
-
-# Generate favicon in multiple sizes if source exists
-if [ -f "public/favicon-source.png" ]; then
-    echo "🎯 Generating favicon variants..."
+# Function to optimize JPEG files
+optimize_jpg() {
+    local file="$1"
+    echo "   Optimizing JPEG: $(basename "$file")"
     
-    sizes=(16 32 72 96 128 144 152 192 384 512)
-    
-    for size in "${sizes[@]}"; do
-        if command -v convert >/dev/null 2>&1; then
-            convert public/favicon-source.png -resize "${size}x${size}" "public/icon-${size}x${size}.png"
-            echo "✅ Generated ${size}x${size} icon"
-        fi
-    done
-    
-    # Generate ICO file
-    if command -v convert >/dev/null 2>&1; then
-        convert public/favicon-source.png -resize 32x32 public/favicon.ico
-        echo "✅ Generated favicon.ico"
-    fi
-    
-    # Generate Apple touch icon
-    if command -v convert >/dev/null 2>&1; then
-        convert public/favicon-source.png -resize 180x180 public/apple-touch-icon.png
-        echo "✅ Generated Apple touch icon"
-    fi
-fi
-
-# Create placeholder images if they don't exist
-create_placeholder() {
-    local width="$1"
-    local height="$2"
-    local filename="$3"
-    local text="$4"
-    
-    if command -v convert >/dev/null 2>&1; then
-        convert -size "${width}x${height}" xc:#3b82f6 \
-                -fill white -gravity center \
-                -pointsize 24 -annotate +0+0 "$text" \
-                "public/$filename"
-        echo "✅ Created placeholder: $filename"
+    if command -v jpegoptim >/dev/null 2>&1; then
+        jpegoptim --max=85 --strip-all "$file"
+    elif command -v jpegtran >/dev/null 2>&1; then
+        jpegtran -optimize -progressive "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+    else
+        echo "   ⚠️ No JPEG optimizer found, skipping"
     fi
 }
 
-# Create screenshot placeholders if they don't exist
-if [ ! -f "public/images/screenshot-mobile-weather.webp" ]; then
-    create_placeholder 390 844 "images/screenshot-mobile-weather.png" "Weather\nView"
+# Function to convert to WebP if possible
+convert_to_webp() {
+    local file="$1"
+    local webp_file="${file%.*}.webp"
+    
     if command -v cwebp >/dev/null 2>&1; then
-        cwebp -q 80 "public/images/screenshot-mobile-weather.png" -o "public/images/screenshot-mobile-weather.webp"
-        rm "public/images/screenshot-mobile-weather.png"
+        echo "   Converting to WebP: $(basename "$file")"
+        cwebp -q 85 "$file" -o "$webp_file"
+        
+        # Keep original file as fallback
+        echo "   ✅ Created WebP version: $(basename "$webp_file")"
     fi
+}
+
+# Find and optimize images
+find "$TARGET_DIR" -type f $$ -name "*.png" -o -name "*.PNG" $$ | while read -r file; do
+    optimize_png "$file"
+    convert_to_webp "$file"
+done
+
+find "$TARGET_DIR" -type f $$ -name "*.jpg" -o -name "*.jpeg" -o -name "*.JPG" -o -name "*.JPEG" $$ | while read -r file; do
+    optimize_jpg "$file"
+    convert_to_webp "$file"
+done
+
+# Optimize SVG files
+if command -v svgo >/dev/null 2>&1; then
+    find "$TARGET_DIR" -type f -name "*.svg" | while read -r file; do
+        echo "   Optimizing SVG: $(basename "$file")"
+        svgo "$file"
+    done
 fi
 
-if [ ! -f "public/images/screenshot-mobile-control.webp" ]; then
-    create_placeholder 390 844 "images/screenshot-mobile-control.png" "Control\nPanel"
-    if command -v cwebp >/dev/null 2>&1; then
-        cwebp -q 80 "public/images/screenshot-mobile-control.png" -o "public/images/screenshot-mobile-control.webp"
-        rm "public/images/screenshot-mobile-control.png"
+# Generate image manifest for lazy loading
+echo "📋 Generating image manifest..."
+cat > "$TARGET_DIR/images-manifest.json" << EOF
+{
+  "generated": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "images": [
+EOF
+
+# Add image entries to manifest
+first=true
+find "$TARGET_DIR" -type f $$ -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.webp" -o -name "*.svg" $$ | while read -r file; do
+    relative_path=${file#$TARGET_DIR/}
+    size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+    
+    if [ "$first" = true ]; then
+        first=false
+    else
+        echo "," >> "$TARGET_DIR/images-manifest.json"
     fi
-fi
+    
+    echo "    {" >> "$TARGET_DIR/images-manifest.json"
+    echo "      \"path\": \"$relative_path\"," >> "$TARGET_DIR/images-manifest.json"
+    echo "      \"size\": $size" >> "$TARGET_DIR/images-manifest.json"
+    echo -n "    }" >> "$TARGET_DIR/images-manifest.json"
+done
 
-# Compress CSS and JS files
-echo "🗜️ Compressing CSS and JS files..."
+cat >> "$TARGET_DIR/images-manifest.json" << EOF
 
-if command -v terser >/dev/null 2>&1; then
-    terser public/script.js -c -m -o public/script.min.js
-    echo "✅ Minified JavaScript"
-fi
+  ]
+}
+EOF
 
-if command -v cleancss >/dev/null 2>&1; then
-    cleancss -o public/styles.min.css public/styles.css
-    echo "✅ Minified CSS"
-fi
-
-# Generate image optimization report
-echo "📊 Image optimization report:"
-echo "   - Original images: $(find public -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" | wc -l)"
-echo "   - WebP images: $(find public -name "*.webp" | wc -l)"
-echo "   - Icon variants: $(find public -name "icon-*.png" | wc -l)"
-echo "   - Total image size: $(du -sh public/images 2>/dev/null | cut -f1 || echo "N/A")"
-
-echo "🎉 Image optimization complete!"
-echo "💡 Tips:"
-echo "   - Use WebP format for better compression"
-echo "   - Implement lazy loading for better performance"
-echo "   - Consider using responsive images with srcset"
+echo "✅ Image optimization complete!"
+echo "📊 Summary:"
+echo "   - PNG files: $(find "$TARGET_DIR" -name "*.png" | wc -l)"
+echo "   - JPEG files: $(find "$TARGET_DIR" -name "*.jpg" -o -name "*.jpeg" | wc -l)"
+echo "   - WebP files: $(find "$TARGET_DIR" -name "*.webp" | wc -l)"
+echo "   - SVG files: $(find "$TARGET_DIR" -name "*.svg" | wc -l)"
+echo "   - Total size: $(du -sh "$TARGET_DIR" | cut -f1)"

@@ -119,6 +119,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell",
+      "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
@@ -132,20 +134,33 @@
   }
 }
 
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
 /* Mobile-first responsive design */
 .mobile-container {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   position: fixed;
   top: 0;
   left: 0;
   overflow: hidden;
+  position: relative;
+  touch-action: manipulation;
 }
 
 /* Weather card optimizations */
 .weather-card {
   min-height: 400px;
   max-width: 90vw;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  transition: transform 0.3s ease;
 }
 
 /* Control buttons - minimum 48x48px touch targets */
@@ -154,29 +169,35 @@
   min-width: 120px;
   font-size: 16px;
   line-height: 1.4;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+  transform-origin: center;
 }
 
 .control-grid {
   gap: 12px;
   padding: 8px;
   max-height: calc(100vh - 32px);
+  height: calc(100vh - 2rem);
+  height: calc(100dvh - 2rem);
 }
 
 /* Button animations - reduced for performance */
-@keyframes buttonPulse {
-  0% {
-    transform: scale(1);
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
   }
   50% {
-    transform: scale(1.005);
-  }
-  100% {
-    transform: scale(1);
+    opacity: 0.7;
   }
 }
 
 .animate-button {
-  animation: buttonPulse 6s ease-in-out infinite;
+  animation: pulse 1s ease-in-out;
 }
 
 .animate-button:hover {
@@ -186,7 +207,7 @@
 
 .animate-button:active {
   animation: none;
-  transform: scale(0.98);
+  transform: scale(0.95);
 }
 
 /* Mobile landscape optimization */
@@ -200,11 +221,11 @@
     left: 0;
     transform: rotate(-90deg);
   }
-  
+
   .weather-card {
     max-width: 400px;
   }
-  
+
   .control-grid {
     max-width: 600px;
     margin: 0 auto;
@@ -217,13 +238,13 @@
     max-width: 95vw;
     margin: 0 8px;
   }
-  
+
   .control-button {
     min-height: 70px;
     min-width: 100px;
     font-size: 14px;
   }
-  
+
   .control-grid {
     gap: 8px;
     padding: 4px;
@@ -237,7 +258,7 @@
     min-width: 90px;
     font-size: 13px;
   }
-  
+
   .weather-card {
     padding: 12px;
   }
@@ -248,7 +269,7 @@
   .weather-card {
     max-width: 500px;
   }
-  
+
   .control-button {
     min-height: 100px;
     min-width: 150px;
@@ -264,11 +285,11 @@
     position: relative;
     height: 100vh;
   }
-  
+
   .weather-card {
     max-width: 600px;
   }
-  
+
   .control-button {
     min-height: 120px;
     min-width: 180px;
@@ -281,7 +302,7 @@
   .control-button:hover {
     transform: none;
   }
-  
+
   .control-button:active {
     transform: scale(0.95);
     transition: transform 0.1s ease;
@@ -296,12 +317,16 @@
 }
 
 /* Prevent zoom on input focus */
-input, select, textarea {
+input,
+select,
+textarea {
   font-size: 16px !important;
 }
 
 /* Improve touch targets */
-button, a, [role="button"] {
+button,
+a,
+[role="button"] {
   min-height: 48px;
   min-width: 48px;
   -webkit-tap-highlight-color: transparent;
@@ -320,10 +345,13 @@ button, a, [role="button"] {
 
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
-  .animate-button {
+  .animate-button,
+  .weather-card,
+  .haptic-feedback {
     animation: none;
+    transition: none;
   }
-  
+
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
@@ -331,35 +359,26 @@ button, a, [role="button"] {
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
+/* PWA specific styles */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
-/* No scrolling anywhere */
-html, body, #__next, [data-nextjs-scroll-focus-boundary] {
-  overflow: hidden !important;
-  height: 100vh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .control-button {
+    border: 2px solid currentColor;
+  }
 }
 
-/* Performance optimizations */
-* {
-  box-sizing: border-box;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-  loading: lazy;
-}
-
-/* Smooth scrolling for any internal navigation */
-html {
-  scroll-behavior: smooth;
+/* Font loading optimization */
+.font-inter {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell",
+    "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-display: swap;
 }

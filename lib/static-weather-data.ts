@@ -7,195 +7,208 @@ export interface WeatherData {
   description: string
   icon: string
   timestamp: number
+  sunrise?: string
+  sunset?: string
+  pressure?: number
+  visibility?: number
+  uvIndex?: number
+  feelsLike?: number
+  dewPoint?: number
+  hourlyForecast?: HourlyWeather[]
+  dailyForecast?: DailyWeather[]
+}
+
+export interface HourlyWeather {
+  time: string
+  temperature: number
+  humidity: number
+  precipitation: number
+  windSpeed: number
+  windDirection: number
+  pressure: number
+  visibility: number
+  weatherCode: number
+  icon: string
+  condition: string
+}
+
+export interface DailyWeather {
+  date: string
+  maxTemp: number
+  minTemp: number
+  weatherCode: number
+  icon: string
+  condition: string
+  sunrise: string
+  sunset: string
+  precipitation: number
+  windSpeed: number
 }
 
 export interface Location {
   name: string
   locationKey: string
+  latitude: number
+  longitude: number
 }
 
 export const locations: Location[] = [
-  { name: "Wieluń Piaski", locationKey: "2747373" },
-  { name: "Konopnica", locationKey: "2747374" },
-  { name: "Wieluń", locationKey: "315078" },
-  { name: "Łódź", locationKey: "274231" },
-  { name: "Warszawa", locationKey: "274663" },
+  { name: "Konopnica", locationKey: "konopnica", latitude: 51.221, longitude: 18.5696 },
+  { name: "Warszawa", locationKey: "warszawa", latitude: 52.2298, longitude: 21.0118 },
+  { name: "Wieluń", locationKey: "wielun", latitude: 51.3538, longitude: 18.8236 },
 ]
 
-// Statyczne dane pogodowe - symulują różne warunki pogodowe
-export const staticWeatherData: Record<string, WeatherData[]> = {
-  "2747373": [
-    // Wieluń Piaski
-    {
-      location: "Wieluń Piaski",
-      temperature: 12,
-      humidity: 68,
-      windSpeed: 15,
-      condition: "Częściowe zachmurzenie",
-      description: "częściowe zachmurzenie z przejaśnieniami",
-      icon: "partly-cloudy",
-      timestamp: Date.now(),
-    },
-    {
-      location: "Wieluń Piaski",
-      temperature: 8,
-      humidity: 75,
-      windSpeed: 12,
-      condition: "Pochmurno",
-      description: "pochmurno z możliwością opadów",
-      icon: "cloudy",
-      timestamp: Date.now(),
-    },
-    {
-      location: "Wieluń Piaski",
-      temperature: 18,
-      humidity: 45,
-      windSpeed: 8,
-      condition: "Słonecznie",
-      description: "słonecznie i ciepło",
-      icon: "sunny",
-      timestamp: Date.now(),
-    },
-  ],
-  "2747374": [
-    // Konopnica
-    {
-      location: "Konopnica",
-      temperature: 10,
-      humidity: 72,
-      windSpeed: 18,
-      condition: "Deszcz",
-      description: "lekki deszcz",
-      icon: "rainy",
-      timestamp: Date.now(),
-    },
-    {
-      location: "Konopnica",
-      temperature: 14,
-      humidity: 60,
-      windSpeed: 10,
-      condition: "Częściowe zachmurzenie",
-      description: "zmienne zachmurzenie",
-      icon: "partly-cloudy",
-      timestamp: Date.now(),
-    },
-  ],
-  "315078": [
-    // Wieluń
-    {
-      location: "Wieluń",
-      temperature: 15,
-      humidity: 55,
-      windSpeed: 12,
-      condition: "Słonecznie",
-      description: "słonecznie z niewielkim wiatrem",
-      icon: "sunny",
-      timestamp: Date.now(),
-    },
-    {
-      location: "Wieluń",
-      temperature: 6,
-      humidity: 85,
-      windSpeed: 20,
-      condition: "Mgła",
-      description: "gęsta mgła rano",
-      icon: "foggy",
-      timestamp: Date.now(),
-    },
-  ],
-  "274231": [
-    // Łódź
-    {
-      location: "Łódź",
-      temperature: 16,
-      humidity: 50,
-      windSpeed: 14,
-      condition: "Słonecznie",
-      description: "pogodnie i ciepło",
-      icon: "sunny",
-      timestamp: Date.now(),
-    },
-    {
-      location: "Łódź",
-      temperature: 9,
-      humidity: 78,
-      windSpeed: 16,
-      condition: "Pochmurno",
-      description: "pochmurno z przelotnymi opadami",
-      icon: "cloudy",
-      timestamp: Date.now(),
-    },
-  ],
-  "274663": [
-    // Warszawa
-    {
-      location: "Warszawa",
-      temperature: 17,
-      humidity: 48,
-      windSpeed: 11,
-      condition: "Słonecznie",
-      description: "słonecznie i przyjemnie",
-      icon: "sunny",
-      timestamp: Date.now(),
-    },
-    {
-      location: "Warszawa",
-      temperature: 11,
-      humidity: 70,
-      windSpeed: 13,
-      condition: "Częściowe zachmurzenie",
-      description: "zmienne zachmurzenie",
-      icon: "partly-cloudy",
-      timestamp: Date.now(),
-    },
-  ],
+// Weather code mapping for Open-Meteo API
+export const weatherCodeMap: Record<number, { condition: string; description: string; icon: string }> = {
+  0: { condition: "Słonecznie", description: "bezchmurne niebo", icon: "☀️" },
+  1: { condition: "Przeważnie słonecznie", description: "głównie bezchmurnie", icon: "🌤️" },
+  2: { condition: "Częściowo pochmurno", description: "częściowe zachmurzenie", icon: "⛅" },
+  3: { condition: "Pochmurno", description: "zachmurzenie", icon: "☁️" },
+  45: { condition: "Mgła", description: "mgła", icon: "🌫️" },
+  48: { condition: "Szron", description: "osadzający się szron", icon: "🌫️" },
+  51: { condition: "Mżawka", description: "lekka mżawka", icon: "🌦️" },
+  53: { condition: "Mżawka", description: "umiarkowana mżawka", icon: "🌦️" },
+  55: { condition: "Mżawka", description: "gęsta mżawka", icon: "🌦️" },
+  61: { condition: "Deszcz", description: "lekki deszcz", icon: "🌧️" },
+  63: { condition: "Deszcz", description: "umiarkowany deszcz", icon: "🌧️" },
+  65: { condition: "Deszcz", description: "silny deszcz", icon: "🌧️" },
+  71: { condition: "Śnieg", description: "lekki śnieg", icon: "❄️" },
+  73: { condition: "Śnieg", description: "umiarkowany śnieg", icon: "❄️" },
+  75: { condition: "Śnieg", description: "silny śnieg", icon: "❄️" },
+  80: { condition: "Przelotne opady", description: "przelotne opady deszczu", icon: "🌦️" },
+  81: { condition: "Przelotne opady", description: "umiarkowane przelotne opady", icon: "🌦️" },
+  82: { condition: "Przelotne opady", description: "silne przelotne opady", icon: "🌦️" },
+  85: { condition: "Przelotny śnieg", description: "lekki przelotny śnieg", icon: "🌨️" },
+  86: { condition: "Przelotny śnieg", description: "silny przelotny śnieg", icon: "🌨️" },
+  95: { condition: "Burza", description: "burza z piorunami", icon: "⛈️" },
+  96: { condition: "Burza z gradem", description: "burza z lekkim gradem", icon: "⛈️" },
+  99: { condition: "Burza z gradem", description: "burza z silnym gradem", icon: "⛈️" },
 }
 
-// Funkcja do pobierania losowych danych pogodowych dla lokalizacji
-export function getStaticWeatherData(locationKey: string): WeatherData {
-  const locationData = staticWeatherData[locationKey]
-  if (!locationData || locationData.length === 0) {
-    // Fallback data
-    return {
-      location: "Nieznana lokalizacja",
-      temperature: 15,
-      humidity: 60,
-      windSpeed: 10,
-      condition: "Słonecznie",
-      description: "pogodnie",
-      icon: "sunny",
-      timestamp: Date.now(),
+// Wind direction mapping
+export const windDirectionMap: Record<number, string> = {
+  0: "N",
+  45: "NE",
+  90: "E",
+  135: "SE",
+  180: "S",
+  225: "SW",
+  270: "W",
+  315: "NW",
+}
+
+export function getWindDirection(degrees: number): string {
+  const directions = [
+    "N",
+    "NNE",
+    "NE",
+    "ENE",
+    "E",
+    "ESE",
+    "SE",
+    "SSE",
+    "S",
+    "SSW",
+    "SW",
+    "WSW",
+    "W",
+    "WNW",
+    "NW",
+    "NNW",
+  ]
+  const index = Math.round(degrees / 22.5) % 16
+  return directions[index]
+}
+
+// Fallback static data for offline mode
+export const staticWeatherData: Record<string, WeatherData> = {
+  konopnica: {
+    location: "Konopnica",
+    temperature: 18,
+    humidity: 65,
+    windSpeed: 12,
+    condition: "Słonecznie",
+    description: "bezchmurne niebo",
+    icon: "☀️",
+    timestamp: Date.now(),
+    sunrise: "06:30",
+    sunset: "19:45",
+    pressure: 1013,
+    visibility: 10000,
+    uvIndex: 5,
+    feelsLike: 20,
+    dewPoint: 12,
+  },
+  warszawa: {
+    location: "Warszawa",
+    temperature: 20,
+    humidity: 58,
+    windSpeed: 8,
+    condition: "Częściowo pochmurno",
+    description: "częściowe zachmurzenie",
+    icon: "⛅",
+    timestamp: Date.now(),
+    sunrise: "06:25",
+    sunset: "19:50",
+    pressure: 1015,
+    visibility: 8000,
+    uvIndex: 4,
+    feelsLike: 22,
+    dewPoint: 10,
+  },
+  wielun: {
+    location: "Wieluń",
+    temperature: 16,
+    humidity: 72,
+    windSpeed: 15,
+    condition: "Pochmurno",
+    description: "zachmurzenie",
+    icon: "☁️",
+    timestamp: Date.now(),
+    sunrise: "06:35",
+    sunset: "19:40",
+    pressure: 1010,
+    visibility: 6000,
+    uvIndex: 2,
+    feelsLike: 14,
+    dewPoint: 11,
+  },
+}
+
+// API rate limiting
+export class APIRateLimit {
+  private calls = 0
+  private lastReset: number = Date.now()
+  private readonly maxCalls: number = 9000 // Leave some buffer under 10000
+  private readonly resetInterval: number = 24 * 60 * 60 * 1000 // 24 hours
+
+  canMakeCall(): boolean {
+    this.checkReset()
+    return this.calls < this.maxCalls
+  }
+
+  recordCall(): void {
+    this.calls++
+    localStorage.setItem("api_calls", this.calls.toString())
+    localStorage.setItem("api_last_reset", this.lastReset.toString())
+  }
+
+  private checkReset(): void {
+    const now = Date.now()
+    if (now - this.lastReset > this.resetInterval) {
+      this.calls = 0
+      this.lastReset = now
+    } else {
+      // Load from localStorage
+      const savedCalls = localStorage.getItem("api_calls")
+      const savedReset = localStorage.getItem("api_last_reset")
+      if (savedCalls) this.calls = Number.parseInt(savedCalls)
+      if (savedReset) this.lastReset = Number.parseInt(savedReset)
     }
   }
 
-  // Zwróć losowy element z dostępnych danych
-  const randomIndex = Math.floor(Math.random() * locationData.length)
-  return {
-    ...locationData[randomIndex],
-    timestamp: Date.now(),
-  }
-}
-
-// Funkcja do symulacji zmiany pogody w czasie
-export function getWeatherWithTimeVariation(locationKey: string): WeatherData {
-  const baseData = getStaticWeatherData(locationKey)
-  const hour = new Date().getHours()
-
-  // Symuluj zmiany temperatury w ciągu dnia
-  let temperatureModifier = 0
-  if (hour >= 6 && hour < 12) {
-    temperatureModifier = Math.floor(Math.random() * 3) // Rano: +0 do +2°C
-  } else if (hour >= 12 && hour < 18) {
-    temperatureModifier = Math.floor(Math.random() * 5) + 2 // Popołudnie: +2 do +6°C
-  } else if (hour >= 18 && hour < 22) {
-    temperatureModifier = Math.floor(Math.random() * 2) // Wieczór: +0 do +1°C
-  } else {
-    temperatureModifier = -Math.floor(Math.random() * 3) // Noc: -2 do 0°C
-  }
-
-  return {
-    ...baseData,
-    temperature: Math.max(baseData.temperature + temperatureModifier, -10),
-    timestamp: Date.now(),
+  getRemainingCalls(): number {
+    this.checkReset()
+    return Math.max(0, this.maxCalls - this.calls)
   }
 }
