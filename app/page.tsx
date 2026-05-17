@@ -313,7 +313,7 @@ export default function MobileControlPanel() {
   const [showHourlyForecast, setShowHourlyForecast] = useState(false)
   const [showDailyForecast, setShowDailyForecast] = useState(false)
   const [backgroundGradient, setBackgroundGradient] = useState("from-blue-400 via-blue-600 to-blue-800")
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
   const [gradientIndex, setGradientIndex] = useState(0)
   const [isSwipeInProgress, setIsSwipeInProgress] = useState(false)
   const [espIp, setEspIp] = useState("192.168.1.100") // ← zmień na IP swojego ESP32
@@ -334,6 +334,7 @@ export default function MobileControlPanel() {
   ]
 
   useEffect(() => {
+    setCurrentTime(new Date())
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
@@ -656,7 +657,7 @@ export default function MobileControlPanel() {
 
       {/* Current time */}
       <div className="absolute top-3 right-3 text-white/90 text-2xl font-bold z-10 bg-black/20 px-4 py-2 rounded-full backdrop-blur-sm shadow-lg">
-        {formatCurrentTime(currentTime)}
+        {currentTime ? formatCurrentTime(currentTime) : "--:--"}
       </div>
 
       {/* Gradient test button */}
