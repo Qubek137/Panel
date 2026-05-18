@@ -316,7 +316,7 @@ export default function MobileControlPanel() {
   const [currentTime, setCurrentTime] = useState<Date | null>(null)
   const [gradientIndex, setGradientIndex] = useState(0)
   const [isSwipeInProgress, setIsSwipeInProgress] = useState(false)
-  const [espIp, setEspIp] = useState("192.168.1.100") // ← zmień na IP swojego ESP32
+  const [espIp, setEspIp] = useState("192.168.0.200") // ← zmień na IP swojego ESP32
   const weatherCardRef = useRef<HTMLDivElement>(null)
   const apiRateLimit = useRef(new APIRateLimit())
 
