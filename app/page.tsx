@@ -83,27 +83,16 @@ function LEDPanel({ espIp, onBack }: { espIp: string; onBack: () => void }) {
   const [lastSent, setLastSent] = useState<string | null>(null)
   const [espOnline, setEspOnline] = useState<boolean | null>(null)
 
-  // Sprawdź status ESP przy montowaniu
-  useEffect(() => {
-    if (!espIp) return
-    fetch(`http://${espIp}/status`, { signal: AbortSignal.timeout(3000) })
-      .then(r => r.ok ? setEspOnline(true) : setEspOnline(false))
-      .catch(() => setEspOnline(false))
-  }, [espIp])
-
   const sendIR = async (action: string) => {
     setSending(true)
     setLastSent(action)
     try {
-      if (espIp) {
-        await fetch(`http://${espIp}/ir`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code: IR_CODES[action] }),
-          signal: AbortSignal.timeout(3000),
-        })
-        setEspOnline(true)
-      }
+      await fetch("/api/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      })
+      setEspOnline(true)
     } catch {
       setEspOnline(false)
     } finally {
